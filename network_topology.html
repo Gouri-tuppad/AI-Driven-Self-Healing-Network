@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto; background: #f8fafc; color: #111827; border-radius: 16px;">
+    <h1 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        📡 Client Node Failure Monitoring
+    </h1>
+    
+    <!-- Navigation Buttons -->
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{% url 'admin_panel:admin_dashboard' %}" style="padding: 0.75rem 1.5rem; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">← Dashboard</a>
+        <a href="{% url 'admin_panel:admin_clients' %}" style="padding: 0.75rem 1.5rem; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">👥 Clients</a>
+        <a href="{% url 'admin_panel:admin_network_monitoring' %}" style="padding: 0.75rem 1.5rem; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">🌐 Network Monitoring</a>
+        <a href="{% url 'admin_panel:admin_network_logs' %}" style="padding: 0.75rem 1.5rem; background-color: #e74c3c; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">📋 Network Logs</a>
+    </div>
+
+    <!-- Summary Stats -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <!-- Total Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #3498db;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Total Nodes</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;" id="total_nodes">{{ total_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">Client Devices</div>
+        </div>
+
+        <!-- Active Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #27ae60;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Active Nodes</div>
+            <div style="font-size: 36px; font-weight: bold; color: #27ae60; margin: 0.5rem 0;" id="active_nodes">🟢 {{ active_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">User Activity Detected</div>
+        </div>
+
+        <!-- Inactive Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #f39c12;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Inactive Nodes</div>
+            <div style="font-size: 36px; font-weight: bold; color: #f39c12; margin: 0.5rem 0;" id="inactive_nodes">🟡 {{ inactive_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">Connected but Idle</div>
+        </div>
+
+        <!-- Failed Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #e74c3c;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Node Failures</div>
+            <div style="font-size: 36px; font-weight: bold; color: #e74c3c; margin: 0.5rem 0;" id="failed_nodes">🔴 {{ failed_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">No Heartbeat</div>
+        </div>
+
+        <!-- Server Status -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid {% if server_status == 'healthy' %}#27ae60{% else %}#e74c3c{% endif %};">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Central Server</div>
+            <div style="font-size: 28px; font-weight: bold; color: {% if server_status == 'healthy' %}#27ae60{% else %}#e74c3c{% endif %}; margin: 0.5rem 0;" id="server_status">
+                {% if server_status == 'healthy' %}✓ Healthy{% else %}✗ Unhealthy{% endif %}
+            </div>
+            <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;" id="server_response_time">
+                {% if server_response_time %}Response: {{ server_response_time }}ms{% else %}Offline{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration & Auto-Refresh -->
+    <div style="background: #e7f3ff; border-left: 4px solid #2196F3; padding: 1rem; border-radius: 5px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <p style="margin: 0; font-size: 13px;">
+                <strong>⏱️ Activity Timeout:</strong> 
+                <span id="timeout_display">{{ timeout_seconds }}s</span> for ACTIVE status.
+                NODE FAILURE detected when no heartbeat for 
+                <span id="heartbeat_timeout_display">{{ timeout_seconds|add:"30" }}s</span>.
+            </p>
+            <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #0066cc;">
+                <a href="?timeout=30" style="color: #0066cc; text-decoration: none;">30s</a> | 
+                <a href="?timeout=60" style="color: #0066cc; text-decoration: none;">60s</a> | 
+                <a href="?timeout=120" style="color: #0066cc; text-decoration: none;">120s</a> | 
+                <a href="?timeout=300" style="color: #0066cc; text-decoration: none;">300s</a>
+            </p>
+        </div>
+        <div>
+            <label style="font-size: 13px; color: #333; font-weight: bold;">
+                <input type="checkbox" id="auto_refresh" checked style="margin-right: 0.5rem;">
+                Auto-refresh every 5s
+            </label>
+        </div>
+    </div>
+
+    <!-- Client Nodes Monitoring Table -->
+    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 1rem; margin-bottom: 1.5rem;">📊 Client Node Status Details</h2>
+        
+        {% if client_nodes %}
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa; text-align: left;">
+                            <th style="padding: 1rem; border-bottom: 2px solid #e0e0e0; font-weight: bold;">Status</th>
+                            <th style="padding: 1rem; border-bottom: 2px solid #e0e0e0; font-weight: bold;">Username</th>
+                            <th style="padding: 1rem; border-bottom: 2px solid #e0e0e0; font-weight: bold;">Client IP</th>
+                            <th style="padding: 1rem; border-bottom: 2px solid #e0e0e0; font-weight: bold;">Last Activity</th>
+                            <th style="padding: 1rem; border-bottom: 2px solid #e0e0e0; font-weight: bold;">Last Heartbeat</th>
+                            <th style="padding: 1rem; border-bottom: 2px solid #e0e0e0; font-weight: bold;">Connection</th>
+                            <th style="padding: 1rem; border-bottom: 2px solid #e0e0e0; font-weight: bold;">Activity Sources</th>
+                        </tr>
+                    </thead>
+                    <tbody id="node_table_body">
+                        {% for node in client_nodes %}
+                            <tr style="border-bottom: 1px solid #e0e0e0; {% if node.status == 'NODE_FAILURE' %}background-color: #ffe0e0;{% elif node.status == 'INACTIVE' %}background-color: #fff8e0;{% else %}background-color: #e0f7e0;{% endif %}">
+                                <td style="padding: 1rem;">
+                                    <span style="display: inline-block; padding: 0.5rem 1rem; border-radius: 20px; background-color: {% if node.status == 'ACTIVE' %}#d4edda{% elif node.status == 'INACTIVE' %}#fff3cd{% else %}#f8d7da{% endif %}; color: {% if node.status == 'ACTIVE' %}#155724{% elif node.status == 'INACTIVE' %}#856404{% else %}#721c24{% endif %}; font-weight: bold; font-size: 12px;">
+                                        {{ node.status_badge.icon }} {{ node.status }}
+                                    </span>
+                                </td>
+                                <td style="padding: 1rem;">
+                                    <strong>{{ node.username }}</strong>
+                                </td>
+                                <td style="padding: 1rem;">
+                                    <code style="background: #f5f5f5; padding: 0.25rem 0.5rem; border-radius: 3px;">{{ node.ip_address|default:"Unknown" }}</code>
+                                </td>
+                                <td style="padding: 1rem; font-size: 12px;">
+                                    <span title="{% if node.node_status.last_activity %}{{ node.node_status.last_activity|date:'Y-m-d H:i:s' }}{% else %}Never{% endif %}">{{ node.last_activity_formatted }}</span>
+                                </td>
+                                <td style="padding: 1rem; font-size: 12px;">
+                                    <span title="{% if node.node_status.last_heartbeat %}{{ node.node_status.last_heartbeat|date:'Y-m-d H:i:s' }}{% else %}Never{% endif %}" style="{% if node.node_status.last_heartbeat %}color: #27ae60;{% else %}color: #e74c3c;{% endif %}">
+                                        {% if node.node_status.last_heartbeat %}
+                                            ✓ {{ node.node_status.last_heartbeat|timeuntil }} ago
+                                        {% else %}
+                                            ✗ Never
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td style="padding: 1rem; font-size: 12px;">
+                                    <div style="color: #666;">
+                                        Duration: <strong>{{ node.connection_duration }}</strong><br>
+                                        Since: <small>{{ node.connected_at_ist }}</small>
+                                    </div>
+                                </td>
+                                <td style="padding: 1rem; font-size: 12px;">
+                                    {% if node.recent_requests %}
+                                        📄 <strong>{{ node.recent_requests|length }}</strong> requests<br>
+                                    {% endif %}
+                                    {% if node.exam_activity %}
+                                        ✏️ <strong>{{ node.exam_activity|length }}</strong> exam actions<br>
+                                    {% endif %}
+                                    {% if not node.recent_requests and not node.exam_activity %}
+                                        <small style="color: #999;">No activity in timeframe</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f4f8; border-radius: 5px;">
+                <p style="margin: 0; font-size: 13px; color: #333;">
+                    <strong>Status Legend:</strong><br>
+                </p>
+                <ul style="margin: 0.5rem 0 0 0; font-size: 12px; color: #555; padding-left: 1.5rem;">
+                    <li><strong>🟢 ACTIVE</strong> - User actively interacting (last activity within {{ timeout_seconds }}s)</li>
+                    <li><strong>🟡 INACTIVE</strong> - Connected but idle (heartbeat received, but no activity)</li>
+                    <li><strong>🔴 NODE FAILURE</strong> - Unreachable (no heartbeat for {{ timeout_seconds }}+ seconds)</li>
+                </ul>
+            </div>
+
+        {% else %}
+            <div style="background: #f0f4f8; padding: 2rem; border-radius: 5px; text-align: center; color: #666;">
+                <p>No client nodes found in the system.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Information Section -->
+    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 2rem;">
+        <h3 style="border-bottom: 2px solid #3498db; padding-bottom: 1rem; margin-bottom: 1.5rem;">ℹ️ Monitoring Logic Explained</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+            <!-- Heartbeat Mechanism -->
+            <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 5px; border-left: 4px solid #3498db;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">💓 Heartbeat Mechanism</h4>
+                <p style="font-size: 13px; color: #666; line-height: 1.6; margin: 0;">
+                    Browser sends periodic heartbeats every <strong>30-60 seconds</strong>. This proves the browser/client is still connected, even if user is idle.
+                </p>
+                <p style="font-size: 12px; color: #999; margin: 0.5rem 0 0 0;">
+                    Endpoint: <code>/api/heartbeat/</code>
+                </p>
+            </div>
+
+            <!-- Activity Tracking -->
+            <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 5px; border-left: 4px solid #27ae60;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">⚡ User Activity Tracking</h4>
+                <p style="font-size: 13px; color: #666; line-height: 1.6; margin: 0;">
+                    Tracks real interactions: page requests, exam submissions, form data. Different from heartbeat - only sent when user actively does something.
+                </p>
+                <p style="font-size: 12px; color: #999; margin: 0.5rem 0 0 0;">
+                    Tracked from: RequestLog, ExamAttempt, navigation
+                </p>
+            </div>
+
+            <!-- ACTIVE Status -->
+            <div style="background: #e0f7e0; padding: 1.5rem; border-radius: 5px; border-left: 4px solid #27ae60;">
+                <h4 style="color: #155724; margin-top: 0; margin-bottom: 0.5rem;">🟢 ACTIVE Status</h4>
+                <p style="font-size: 13px; color: #333; line-height: 1.6; margin: 0;">
+                    User is actively using the system. Last activity detected within {{ timeout_seconds }} seconds. Node is healthy and responsive.
+                </p>
+            </div>
+
+            <!-- INACTIVE Status -->
+            <div style="background: #fff8e0; padding: 1.5rem; border-radius: 5px; border-left: 4px solid #f39c12;">
+                <h4 style="color: #856404; margin-top: 0; margin-bottom: 0.5rem;">🟡 INACTIVE Status</h4>
+                <p style="font-size: 13px; color: #333; line-height: 1.6; margin: 0;">
+                    Browser/client is connected (heartbeat received) but user is idle. No recent activity detected. Connection is alive.
+                </p>
+            </div>
+
+            <!-- NODE_FAILURE Status -->
+            <div style="background: #ffe0e0; padding: 1.5rem; border-radius: 5px; border-left: 4px solid #e74c3c;">
+                <h4 style="color: #721c24; margin-top: 0; margin-bottom: 0.5rem;">🔴 NODE FAILURE Status</h4>
+                <p style="font-size: 13px; color: #333; line-height: 1.6; margin: 0;">
+                    Client is unreachable. No heartbeat received for extended period. Likely causes: PC shutdown, WiFi disconnected, browser closed, network error.
+                </p>
+            </div>
+
+            <!-- Real Data Only -->
+            <div style="background: #f0f8ff; padding: 1.5rem; border-radius: 5px; border-left: 4px solid #3498db;">
+                <h4 style="color: #0c3a66; margin-top: 0; margin-bottom: 0.5rem;">✅ Real Data Only</h4>
+                <p style="font-size: 13px; color: #333; line-height: 1.6; margin: 0;">
+                    No fake values or simulation. All data comes from actual database records: RequestLog, ExamAttempt, ActiveConnection, Student profiles.
+                </p>
+            </div>
+
+            <!-- Educational Value -->
+            <div style="background: #f0f0f0; padding: 1.5rem; border-radius: 5px; border-left: 4px solid #666;">
+                <h4 style="color: #333; margin-top: 0; margin-bottom: 0.5rem;">🎓 Computer Networks Concepts</h4>
+                <p style="font-size: 13px; color: #555; line-height: 1.6; margin: 0;">
+                    Demonstrates key networking concepts: client-server communication, connection monitoring, failure detection, heartbeat protocols, network diagnostics.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; text-align: center; color: #666; font-size: 12px;">
+        <p style="margin: 0;">
+            Last updated: <span id="last_update">just now</span> | 
+            Activity Timeout: <strong>{{ timeout_seconds }}s</strong> | 
+            Heartbeat Timeout: <strong>{{ timeout_seconds }}s</strong>
+        </p>
+    </div>
+</div>
+
+<script>
+// Real-time auto-refresh
+let autoRefreshEnabled = true;
+const autoRefreshCheckbox = document.getElementById('auto_refresh');
+
+if (autoRefreshCheckbox) {
+    autoRefreshCheckbox.addEventListener('change', function() {
+        autoRefreshEnabled = this.checked;
+    });
+}
+
+function updateDashboard() {
+    if (!autoRefreshEnabled) return;
+    
+    const timeout = new URLSearchParams(window.location.search).get('timeout') || 60;
+    fetch(`/admin-panel/api/client-node-status/?timeout=${timeout}`)
+        .then(response => response.json())
+        .then(data => {
+            // Update summary stats
+            document.getElementById('total_nodes').textContent = data.total_nodes;
+            document.getElementById('active_nodes').textContent = '🟢 ' + data.active_nodes;
+            document.getElementById('inactive_nodes').textContent = '🟡 ' + data.inactive_nodes;
+            document.getElementById('failed_nodes').textContent = '🔴 ' + data.failed_nodes;
+            document.getElementById('server_status').textContent = 
+                data.server_status === 'healthy' ? '✓ Healthy' : '✗ Unhealthy';
+            document.getElementById('server_response_time').textContent = 
+                data.server_response_time ? `Response: ${data.server_response_time}ms` : 'Offline';
+            document.getElementById('last_update').textContent = new Date().toLocaleTimeString();
+        })
+        .catch(error => console.log('Update error:', error));
+}
+
+// Auto-refresh every 5 seconds
+setInterval(updateDashboard, 5000);
+</script>
+
+{% endblock %}

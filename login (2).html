@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1600px; margin: 0 auto; background: #f8fafc; color: #111827;">
+    <h1 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        🌐 Live Network Topology
+        <span id="refresh-indicator" style="font-size: 14px; color: #7f8c8d; margin-left: auto;">Updating...</span>
+    </h1>
+    
+    <!-- Navigation Bar -->
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <a href="{% url 'admin_panel:admin_dashboard' %}" style="padding: 0.5rem 1rem; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">← Dashboard</a>
+        <a href="{% url 'admin_panel:admin_network_monitoring' %}" style="padding: 0.5rem 1rem; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">🌐 Network Monitoring</a>
+        <a href="{% url 'admin_panel:client_node_monitoring' %}" style="padding: 0.5rem 1rem; background-color: #9b59b6; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">📡 Node Failures</a>
+        
+        <!-- Auto Refresh Toggle -->
+        <div style="margin-left: auto; display: flex; gap: 0.5rem; align-items: center;">
+            <label style="font-weight: 500; margin-right: 0.5rem;">Auto Refresh:</label>
+            <input type="checkbox" id="auto-refresh-toggle" checked style="width: 20px; height: 20px; cursor: pointer;">
+            <span id="refresh-rate" style="color: #7f8c8d; font-size: 12px;">Every 3s</span>
+        </div>
+    </div>
+
+    <!-- Network Statistics Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <!-- Total Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #3498db;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Total Nodes</div>
+            <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;" id="stat-total-nodes">{{ total_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d;">Client nodes connected</div>
+        </div>
+
+        <!-- Active Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #27ae60;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Active Nodes</div>
+            <div style="font-size: 32px; font-weight: bold; color: #27ae60; margin: 0.5rem 0;" id="stat-active-nodes">{{ active_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d;">Status: ACTIVE</div>
+        </div>
+
+        <!-- Inactive Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #f39c12;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Inactive Nodes</div>
+            <div style="font-size: 32px; font-weight: bold; color: #f39c12; margin: 0.5rem 0;" id="stat-inactive-nodes">{{ inactive_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d;">Status: INACTIVE</div>
+        </div>
+
+        <!-- Failed Nodes -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #e74c3c;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Failed Nodes</div>
+            <div style="font-size: 32px; font-weight: bold; color: #e74c3c; margin: 0.5rem 0;" id="stat-failed-nodes">{{ failed_nodes }}</div>
+            <div style="font-size: 11px; color: #7f8c8d;">Status: NODE_FAILURE</div>
+        </div>
+
+        <!-- Network Health -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #9b59b6;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Network Health</div>
+            <div style="font-size: 32px; font-weight: bold; color: #9b59b6; margin: 0.5rem 0;" id="stat-health-score">{{ health_score }}%</div>
+            <div style="font-size: 11px; color: #7f8c8d;" id="stat-health-status">Status: {{ network_status }}</div>
+        </div>
+
+        <!-- Central Server -->
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #16a085;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Central Server</div>
+            <div style="font-size: 32px; font-weight: bold; color: #16a085; margin: 0.5rem 0;">✓</div>
+            <div style="font-size: 11px; color: #7f8c8d;">Status: ONLINE</div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1rem; font-size: 14px; font-weight: bold;">Node Status Legend</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 20px; height: 20px; border-radius: 50%; background: #27ae60;"></div>
+                <span style="font-size: 13px;">Green = ACTIVE</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 20px; height: 20px; border-radius: 50%; background: #f39c12;"></div>
+                <span style="font-size: 13px;">Orange = INACTIVE</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 20px; height: 20px; border-radius: 50%; background: #e74c3c;"></div>
+                <span style="font-size: 13px;">Red = NODE_FAILURE</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 20px; height: 20px; border-radius: 50%; background: #3498db;"></div>
+                <span style="font-size: 13px;">Blue = RECOVERED</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Topology Visualization -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 2rem;">
+        <div style="padding: 1rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-size: 16px; font-weight: bold; margin: 0;">Real-Time Network Topology Graph</h2>
+            <div style="font-size: 12px; color: #7f8c8d;">
+                <span id="last-update">Last updated: Just now</span>
+            </div>
+        </div>
+        
+        <!-- Topology Canvas -->
+        <div id="topology-canvas" style="width: 100%; height: 600px; background: #fafafa; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #7f8c8d;">
+                <div style="font-size: 16px; margin-bottom: 0.5rem;">⏳ Loading topology...</div>
+                <div style="font-size: 12px;">Fetching real network data from backend...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connected Clients Table -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 2rem;">
+        <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 1rem; margin-bottom: 1.5rem; font-size: 16px; font-weight: bold;">Connected Clients (Real-Time)</h2>
+        
+        <!-- Clients Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f8f9fa; text-align: left;">
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e0e0e0; font-weight: bold; font-size: 13px;">Username</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e0e0e0; font-weight: bold; font-size: 13px;">IP Address</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e0e0e0; font-weight: bold; font-size: 13px;">Status</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e0e0e0; font-weight: bold; font-size: 13px;">Last Heartbeat</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e0e0e0; font-weight: bold; font-size: 13px;">Last Activity</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e0e0e0; font-weight: bold; font-size: 13px;">Connection Duration</th>
+                    </tr>
+                </thead>
+                <tbody id="clients-table-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: #7f8c8d;">
+                            Loading client nodes...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Include vis.js library for network visualization -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" />
+
+<!-- Network Topology JavaScript -->
+<script>
+// ============================================================================
+// REAL-TIME NETWORK TOPOLOGY VISUALIZATION
+// ============================================================================
+// This script manages the live network topology display
+// Data is fetched from API endpoints using real backend data
+// Updates dynamically every 3 seconds
+
+// Configuration
+const CONFIG = {
+    apiTopologyUrl: "{% url 'admin_panel:api_network_topology' %}",
+    apiStatsUrl: "{% url 'admin_panel:api_network_topology_stats' %}",
+    refreshInterval: 3000,  // 3 seconds
+    autoRefresh: true,
+};
+
+let networkGraph = null;
+let graphContainer = null;
+let refreshTimer = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🌐 Network Topology Visualization Initializing...');
+    
+    // Initialize graph container
+    graphContainer = document.getElementById('topology-canvas');
+    
+    // Load initial topology data
+    loadTopologyData();
+    
+    // Setup auto-refresh
+    setupAutoRefresh();
+    
+    // Setup refresh toggle
+    document.getElementById('auto-refresh-toggle').addEventListener('change', function() {
+        CONFIG.autoRefresh = this.checked;
+        if (CONFIG.autoRefresh) {
+            setupAutoRefresh();
+        } else {
+            if (refreshTimer) clearInterval(refreshTimer);
+        }
+    });
+});
+
+/**
+ * Load topology data from API and render graph
+ */
+function loadTopologyData() {
+    console.log('📡 Fetching topology data...');
+    
+    fetch(CONFIG.apiTopologyUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✓ Topology data received:', data);
+                renderTopologyGraph(data);
+                updateStatistics(data);
+                updateClientsList(data);
+                updateLastUpdate();
+            } else {
+                console.error('❌ API Error:', data.message);
+                showError('Failed to load topology data: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Fetch Error:', error);
+            showError('Network error: ' + error.message);
+        });
+}
+
+/**
+ * Render the topology graph using vis.js
+ */
+function renderTopologyGraph(data) {
+    console.log('🎨 Rendering topology graph...');
+    
+    // Prepare nodes and edges
+    const nodes = new vis.DataSet(data.nodes);
+    const edges = new vis.DataSet(data.edges);
+    
+    // Graph options
+    const options = {
+        physics: {
+            enabled: true,
+            stabilization: {
+                iterations: 200,
+                fit: true
+            },
+            forceAtlas2Based: {
+                gravitationalConstant: -26,
+                centralGravity: 0.005,
+                springLength: 200,
+                springConstant: 0.08
+            },
+            maxVelocity: 50,
+            solver: 'forceAtlas2Based',
+            timestep: 0.35,
+            stabilization: {iterations: 150}
+        },
+        nodes: {
+            font: {
+                size: 14,
+                face: 'Arial, sans-serif',
+                color: '#ffffff'
+            },
+            shadow: {
+                enabled: true,
+                color: 'rgba(0,0,0,0.3)',
+                size: 8,
+                x: 3,
+                y: 3
+            }
+        },
+        edges: {
+            width: 2,
+            color: { inherit: 'from' },
+            smooth: {
+                type: 'continuous',
+                roundness: 0.5
+            },
+            arrows: {
+                to: { enabled: true, scaleFactor: 0.8 }
+            },
+            font: {
+                size: 11,
+                align: 'top',
+                color: '#666666'
+            }
+        },
+        interaction: {
+            hover: true,
+            zoomView: true,
+            dragView: true,
+            navigationButtons: true,
+            keyboard: true
+        }
+    };
+    
+    // Create or update graph
+    const graphData = { nodes: nodes, edges: edges };
+    
+    if (!networkGraph) {
+        networkGraph = new vis.Network(graphContainer, graphData, options);
+        console.log('✓ Network graph created');
+    } else {
+        networkGraph.setData(graphData);
+        console.log('✓ Network graph updated');
+    }
+    
+    // Fit to view
+    setTimeout(() => {
+        networkGraph.fit();
+    }, 500);
+}
+
+/**
+ * Update statistics cards
+ */
+function updateStatistics(data) {
+    document.getElementById('stat-total-nodes').textContent = data.total_nodes;
+    document.getElementById('stat-active-nodes').textContent = data.active_nodes;
+    document.getElementById('stat-inactive-nodes').textContent = data.inactive_nodes;
+    document.getElementById('stat-failed-nodes').textContent = data.failed_nodes;
+    
+    // Calculate health score
+    const healthScore = data.total_nodes > 0 
+        ? Math.round((data.active_nodes / data.total_nodes) * 100) 
+        : 0;
+    
+    document.getElementById('stat-health-score').textContent = healthScore + '%';
+    
+    const healthStatus = healthScore >= 80 ? 'HEALTHY' : healthScore >= 50 ? 'DEGRADED' : 'CRITICAL';
+    document.getElementById('stat-health-status').textContent = 'Status: ' + healthStatus;
+    
+    // Update color
+    const healthCard = document.getElementById('stat-health-score').parentElement;
+    if (healthStatus === 'HEALTHY') {
+        healthCard.style.borderLeftColor = '#27ae60';
+    } else if (healthStatus === 'DEGRADED') {
+        healthCard.style.borderLeftColor = '#f39c12';
+    } else {
+        healthCard.style.borderLeftColor = '#e74c3c';
+    }
+}
+
+/**
+ * Update clients list table
+ */
+function updateClientsList(data) {
+    const tbody = document.getElementById('clients-table-body');
+    tbody.innerHTML = '';
+    
+    if (data.nodes.length <= 1) {  // Only central server, no clients
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #7f8c8d;">No connected client nodes</td></tr>';
+        return;
+    }
+    
+    // Filter out central server and create table rows for clients
+    const clients = data.nodes.filter(node => node.type === 'client');
+    
+    clients.forEach(client => {
+        const heartbeatTime = client.last_heartbeat 
+            ? new Date(client.last_heartbeat).toLocaleTimeString() 
+            : 'Never';
+        
+        const activityTime = client.last_activity 
+            ? new Date(client.last_activity).toLocaleTimeString() 
+            : 'Never';
+        
+        let statusColor = '#95a5a6';
+        let statusText = client.status;
+        
+        if (client.status === 'ACTIVE') {
+            statusColor = '#27ae60';
+        } else if (client.status === 'INACTIVE') {
+            statusColor = '#f39c12';
+        } else if (client.status === 'NODE_FAILURE') {
+            statusColor = '#e74c3c';
+        }
+        
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #e0e0e0';
+        row.innerHTML = `
+            <td style="padding: 0.75rem; font-weight: 500;">${client.label}</td>
+            <td style="padding: 0.75rem; font-family: monospace; font-size: 12px;">${client.ip_address}</td>
+            <td style="padding: 0.75rem;">
+                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${statusColor}; margin-right: 0.5rem;"></span>
+                <span style="font-weight: 500; color: ${statusColor};">${statusText}</span>
+            </td>
+            <td style="padding: 0.75rem; font-size: 12px; color: #7f8c8d;">${heartbeatTime}</td>
+            <td style="padding: 0.75rem; font-size: 12px; color: #7f8c8d;">${activityTime}</td>
+            <td style="padding: 0.75rem; font-size: 12px; color: #7f8c8d;">
+                ${client.connected_at ? getConnectionDuration(client.connected_at) : 'N/A'}
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Calculate connection duration in human-readable format
+ */
+function getConnectionDuration(connectedAtISO) {
+    const connectedAt = new Date(connectedAtISO);
+    const now = new Date();
+    const diffMs = now - connectedAt;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    
+    if (diffSeconds < 60) return diffSeconds + 's';
+    if (diffSeconds < 3600) return Math.floor(diffSeconds / 60) + 'm';
+    if (diffSeconds < 86400) return Math.floor(diffSeconds / 3600) + 'h';
+    return Math.floor(diffSeconds / 86400) + 'd';
+}
+
+/**
+ * Update last update timestamp
+ */
+function updateLastUpdate() {
+    const now = new Date();
+    document.getElementById('last-update').textContent = 'Last updated: ' + now.toLocaleTimeString();
+    
+    // Update refresh indicator
+    const indicator = document.getElementById('refresh-indicator');
+    indicator.textContent = '✓ Updated';
+    setTimeout(() => {
+        indicator.textContent = 'Updating...';
+    }, 2000);
+}
+
+/**
+ * Setup auto-refresh interval
+ */
+function setupAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    
+    if (CONFIG.autoRefresh) {
+        console.log('🔄 Auto-refresh enabled every ' + (CONFIG.refreshInterval / 1000) + 's');
+        refreshTimer = setInterval(loadTopologyData, CONFIG.refreshInterval);
+    }
+}
+
+/**
+ * Show error message
+ */
+function showError(message) {
+    const container = document.getElementById('topology-canvas');
+    container.innerHTML = `
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #e74c3c; max-width: 80%;">
+            <div style="font-size: 24px; margin-bottom: 0.5rem;">❌ Error</div>
+            <div style="font-size: 14px;">${message}</div>
+            <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Reload Page</button>
+        </div>
+    `;
+}
+
+console.log('✓ Network Topology visualization script loaded');
+</script>
+
+<style>
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        #topology-canvas {
+            height: 400px !important;
+        }
+        
+        table {
+            font-size: 12px;
+        }
+        
+        td, th {
+            padding: 0.5rem !important;
+        }
+    }
+    
+    /* Improve table readability */
+    table tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s;
+    }
+</style>
+{% endblock %}

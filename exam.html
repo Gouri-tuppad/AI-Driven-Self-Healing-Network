@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="padding: 2rem; max-width: 1200px; margin: 0 auto; color: #111827;">
+    <div style="margin-bottom: 1.5rem;">
+        <a href="{% url 'admin_panel:admin_dashboard' %}" style="color: #1d4ed8; text-decoration: none; font-weight: bold;">← Back to Dashboard</a>
+    </div>
+
+    <h1 style="color: #0f172a;">🌐 Network Monitoring</h1>
+    <p style="color: #334155; margin-bottom: 2rem;">Real-time monitoring of network health and connected PCs</p>
+
+    <!-- Status Display -->
+    <div style="margin-bottom: 2rem;">
+        <div style="background-color: {% if network_status == 'CRITICAL' %}#f8d7da{% else %}#d4edda{% endif %}; color: {% if network_status == 'CRITICAL' %}#721c24{% else %}#155724{% endif %}; padding: 1.5rem; border-radius: 8px; border: 1px solid {% if network_status == 'CRITICAL' %}#f5c6cb{% else %}#c3e6cb{% endif %}; font-size: 18px; font-weight: bold;">
+            <strong>Active Connections:</strong> {{ total_connections }} / {{ max_capacity }}<br>
+            <strong>Status:</strong> 
+            {% if capacity_exceeded %}
+                🔴 <span style="color: #dc3545;">CRITICAL - CAPACITY EXCEEDED</span>
+            {% else %}
+                🟢 <span style="color: #28a745;">NORMAL</span>
+            {% endif %}
+            {% if excess_connections > 0 %}
+                <br><strong>Excess Connections:</strong> {{ excess_connections }} ({{ excess_connections|add:total_connections|add:0 }} total)
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Connected PCs Section -->
+    <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 0.5rem; margin: 2rem 0 1rem 0;">💻 Connected PCs (Real-time)</h2>
+    {% if connected_pcs %}
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <thead>
+                <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e0e0e0;">
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">Username</th>
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">Student ID</th>
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">IP Address</th>
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">Server Node</th>
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">Connected Since</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pc in connected_pcs %}
+                    <tr style="border-bottom: 1px solid #e0e0e0; hover: background-color: #f8f9fa;">
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;"><strong>{{ pc.username }}</strong></td>
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;">{{ pc.student_id }}</td>
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;"><code style="background-color: #f0f0f0; padding: 0.25rem 0.5rem; border-radius: 3px;">{{ pc.ip_address }}</code></td>
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;">{{ pc.server_node|default:"Unassigned" }}</td>
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;">{{ pc.connected_at|date:"H:i:s" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color: #7f8c8d; background-color: #f8f9fa; padding: 2rem; border-radius: 8px; text-align: center;">No connected PCs</p>
+    {% endif %}
+
+    <!-- Network Issues Section -->
+    <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 0.5rem; margin: 2rem 0 1rem 0;">🚨 Network Issues</h2>
+    {% if active_issues %}
+        <div style="background-color: #fff3cd; border-left: 4px solid #ff6b6b; padding: 1rem; border-radius: 5px;">
+            {% for issue in active_issues %}
+                <div style="margin-bottom: 1rem; padding: 1rem; background-color: 
+                    {% if issue.severity == 'CRITICAL' %}#f8d7da
+                    {% elif issue.severity == 'WARNING' %}#fff3cd
+                    {% else %}#d1ecf1
+                    {% endif %}
+                    ; border-left: 4px solid 
+                    {% if issue.severity == 'CRITICAL' %}#dc3545
+                    {% elif issue.severity == 'WARNING' %}#ffc107
+                    {% else %}#17a2b8
+                    {% endif %}
+                    ; border-radius: 5px;">
+                    
+                    <strong style="font-size: 16px; color: 
+                        {% if issue.severity == 'CRITICAL' %}#721c24
+                        {% elif issue.severity == 'WARNING' %}#856404
+                        {% else %}#0c5460
+                        {% endif %}
+                        ">[{{ issue.type }}]</strong>
+                    <span style="margin-left: 10px; color: 
+                        {% if issue.severity == 'CRITICAL' %}#721c24
+                        {% elif issue.severity == 'WARNING' %}#856404
+                        {% else %}#0c5460
+                        {% endif %}
+                        ; font-weight: bold;">Severity: {{ issue.severity }}</span>
+                    <br>
+                    <p style="margin: 0.5rem 0 0 0; color: 
+                        {% if issue.severity == 'CRITICAL' %}#721c24
+                        {% elif issue.severity == 'WARNING' %}#856404
+                        {% else %}#0c5460
+                        {% endif %}
+                        ">{{ issue.description }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color: #155724; font-weight: bold; background-color: #d4edda; padding: 1.5rem; border-radius: 8px; border: 1px solid #c3e6cb;">✓ No network issues detected - All systems operating normally</p>
+    {% endif %}
+
+    <!-- Server Nodes Status -->
+    <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 0.5rem; margin: 2rem 0 1rem 0;">🖥️ Server Nodes Status</h2>
+    {% if nodes_status %}
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <thead>
+                <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e0e0e0;">
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">Node Name</th>
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">IP Address</th>
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">Status</th>
+                    <th style="border: 1px solid #e0e0e0; padding: 1rem; text-align: left; font-weight: bold;">Utilization</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for node in nodes_status %}
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;"><strong>{{ node.name }}</strong></td>
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;"><code style="background-color: #f0f0f0; padding: 0.25rem 0.5rem; border-radius: 3px;">{{ node.ip_address }}</code></td>
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;">
+                            {% if node.is_healthy %}
+                                <span style="background-color: #d4edda; color: #155724; padding: 0.25rem 0.75rem; border-radius: 20px; font-weight: bold; font-size: 12px;">✓ Healthy</span>
+                            {% else %}
+                                <span style="background-color: #f8d7da; color: #721c24; padding: 0.25rem 0.75rem; border-radius: 20px; font-weight: bold; font-size: 12px;">✗ Failed</span>
+                            {% endif %}
+                        </td>
+                        <td style="border: 1px solid #e0e0e0; padding: 1rem;">
+                            {{ node.connections }}/{{ node.max_capacity }} ({{ node.utilization_percent }}%)
+                            <div style="width: 100%; height: 20px; background-color: #e9ecef; border-radius: 4px; overflow: hidden; margin-top: 0.25rem;">
+                                <div style="width: {{ node.utilization_percent }}%; height: 100%; background-color: {% if node.utilization_percent > 80 %}#dc3545{% elif node.utilization_percent > 50 %}#ffc107{% else %}#28a745{% endif %}; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: bold;">
+                                    {{ node.utilization_percent }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <!-- Information Box -->
+    <div style="margin-top: 2rem; padding: 1.5rem; background-color: #e7f3ff; border-radius: 8px; border-left: 4px solid #2196F3;">
+        <p><strong>ℹ️ Network Monitoring Information</strong></p>
+        <p style="margin: 0.5rem 0;">Network issues are <strong>only reported when more than {{ max_capacity }} real PCs are connected</strong>. This ensures you only see genuine network problems from actual user connections.</p>
+        <p style="margin: 0.5rem 0;"><strong>Tracked Issues:</strong></p>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+            <li><strong>🔴 Congestion:</strong> Triggered when more than {{ max_capacity }} PCs are connected</li>
+            <li><strong>⚠️ IP Address Conflict:</strong> When multiple PCs share the same IP address</li>
+            <li><strong>❌ Node Failure:</strong> When server nodes become overloaded or unhealthy</li>
+            <li><strong>💡 Load Balancing:</strong> Recommended actions to distribute connections</li>
+        </ul>
+    </div>
+
+    <script>
+        // Auto-refresh every 3 seconds
+        setTimeout(function(){
+            location.reload();
+        }, 3000);
+    </script>
+</div>
+{% endblock %}

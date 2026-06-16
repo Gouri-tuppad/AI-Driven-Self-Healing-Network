@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Network Traffic</h2>
+<p><a href="{% url 'admin_panel:admin_dashboard' %}">Back to Dashboard</a></p>
+<canvas id="trafficChart" width="800" height="300"></canvas>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/admin_dashboard.js"></script>
+{% endblock %}

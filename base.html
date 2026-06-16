@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Network Logs</h2>
+<p><a href="{% url 'admin_panel:admin_dashboard' %}">Back to Dashboard</a></p>
+<table>
+	<tr><th>Timestamp</th><th>Event Type</th><th>Description</th><th>Severity</th></tr>
+	{% for e in events %}
+		<tr>
+			<td>{{ e.timestamp|date:"Y-m-d H:i:s" }}</td>
+			<td>{{ e.event_type }}</td>
+			<td>{{ e.description }}</td>
+			<td>{{ e.severity }}</td>
+		</tr>
+	{% empty %}
+		<tr><td colspan="4">No network events recorded</td></tr>
+	{% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto; background: #f8fafc; color: #111827; border-radius: 16px;">
+    <h1 style="margin-bottom: 1.5rem;">👨‍💼 Admin Dashboard</h1>
+    
+    <!-- Quick Navigation -->
+    <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{% url 'admin_panel:admin_clients' %}" style="padding: 0.75rem 1.5rem; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">👥 Clients</a>
+        <a href="{% url 'admin_panel:ai_analysis_panel' %}" style="padding: 0.75rem 1.5rem; background-color: #9b59b6; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">🤖 AI Analysis</a>
+        <a href="{% url 'admin_panel:admin_network_monitoring' %}" style="padding: 0.75rem 1.5rem; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">🌐 Network Monitoring</a>
+        <a href="{% url 'admin_panel:network_topology_visualization' %}" style="padding: 0.75rem 1.5rem; background-color: #16a085; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">🔗 Live Topology</a>
+        <a href="{% url 'admin_panel:client_node_monitoring' %}" style="padding: 0.75rem 1.5rem; background-color: #8e44ad; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">📡 Node Failure Monitor</a>
+        <a href="{% url 'admin_panel:admin_network_logs' %}" style="padding: 0.75rem 1.5rem; background-color: #e74c3c; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">📋 Network Logs</a>
+        <a href="{% url 'admin_panel:self_healing_timeline' %}" style="padding: 0.75rem 1.5rem; background-color: #16a085; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s;">⏱️ Self-Healing Timeline</a>
+    </div>
+
+    <!-- Quick Stats -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #3498db;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Active Clients</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;">{{ active_clients_count }}</div>
+        </div>
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #27ae60;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Active Connections</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;">{{ network_status.active_connections }}</div>
+        </div>
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #9b59b6; cursor: pointer; transition: transform 0.2s;" onclick="showStudentsModal()" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Total Students</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;">{{ total_students }}</div>
+            <div style="font-size: 11px; color: #3498db; margin-top: 0.5rem;">Click to view names</div>
+        </div>
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #e74c3c;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Network Events</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;">{{ total_events }}</div>
+        </div>
+    </div>
+
+    <!-- Potential IP Conflict Monitoring -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Potential IP Conflict Monitoring</h2>
+                    <p class="text-muted mb-0">This view uses real system records from ConnectionLog, ExamAttempt, and logged-in users to detect repeated IP usage across different usernames.</p>
+                </div>
+                {% if potential_ip_conflict %}
+                    <span class="badge bg-warning text-dark">Potential IP Conflict Detected</span>
+                {% else %}
+                    <span class="badge bg-success">No IP Conflicts Detected</span>
+                {% endif %}
+            </div>
+
+            {% if ip_conflict_rows %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>IP Address</th>
+                                <th>Timestamp</th>
+                                <th>Source</th>
+                                <th>Conflict Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in ip_conflict_rows %}
+                                <tr>
+                                    <td>{{ row.username }}</td>
+                                    <td><code>{{ row.ip_address }}</code></td>
+                                    <td>{{ row.timestamp|date:'Y-m-d H:i:s' }}</td>
+                                    <td>{{ row.source }}</td>
+                                    <td><span class="badge bg-danger">{{ row.conflict_status }}</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3 text-end text-muted">
+                    Showing {{ conflict_entry_count }} conflict records for {{ conflict_ip_count }} IP addresses.
+                </div>
+            {% else %}
+                <div class="alert alert-secondary mb-0" role="alert">
+                    No repeated IP usage by different usernames was observed in the monitored time window.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Active Client List -->
+    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 1rem; margin-bottom: 1.5rem;">👥 Connected Clients</h2>
+        {% if active_connections %}
+            <p style="color: #7f8c8d; margin-bottom: 1rem;">Total connected clients: <strong>{{ active_clients_count }}</strong></p>
+            <table style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f8f9fa; text-align: left;">
+                        <th style="padding: 0.75rem; border-bottom: 1px solid #e0e0e0;">Username</th>
+                        <th style="padding: 0.75rem; border-bottom: 1px solid #e0e0e0;">IP Address</th>
+                        <th style="padding: 0.75rem; border-bottom: 1px solid #e0e0e0;">Connected At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conn in active_connections %}
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 0.75rem;">{{ conn.student.user.username }}</td>
+                            <td style="padding: 0.75rem;">{{ conn.ip_address }}</td>
+                            <td style="padding: 0.75rem;">{{ conn.connected_at|date:'Y-m-d H:i:s' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="color: #7f8c8d;">No active clients are connected right now.</p>
+        {% endif %}
+    </div>
+
+    <!-- Network Status Section -->
+    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 1rem; margin-bottom: 1.5rem;">🌐 Network Status Summary</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+            <div style="border-left: 4px solid {% if network_status.congestion %}#e74c3c{% else %}#27ae60{% endif %}; padding: 1rem; background-color: {% if network_status.congestion %}#f8d7da{% else %}#d4edda{% endif %};">
+                <div style="font-weight: bold; color: {% if network_status.congestion %}#721c24{% else %}#155724{% endif %};">
+                    {% if network_status.congestion %}🔴 Congestion Detected{% else %}🟢 No Congestion{% endif %}
+                </div>
+                <div style="font-size: 12px; color: {% if network_status.congestion %}#721c24{% else %}#155724{% endif %}; margin-top: 0.5rem;">
+                    Active: {{ network_status.active_connections }} connections
+                </div>
+            </div>
+
+            <div style="border-left: 4px solid {% if network_status.node_failure %}#e74c3c{% else %}#27ae60{% endif %}; padding: 1rem; background-color: {% if network_status.node_failure %}#f8d7da{% else %}#d4edda{% endif %};">
+                <div style="font-weight: bold; color: {% if network_status.node_failure %}#721c24{% else %}#155724{% endif %};">
+                    {% if network_status.node_failure %}❌ Node Failure Detected{% else %}✓ All Nodes Healthy{% endif %}
+                </div>
+                <div style="font-size: 12px; color: {% if network_status.node_failure %}#721c24{% else %}#155724{% endif %}; margin-top: 0.5rem;">
+                    Healthy Nodes: {{ network_status.healthy_nodes }}/{{ network_status.total_nodes }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding: 1rem; background-color: #e7f3ff; border-left: 4px solid #2196F3; border-radius: 5px;">
+            <p style="margin: 0; font-size: 14px;"><strong>💡 Note:</strong> Real IP conflicts are detected in the <strong>"Potential IP Conflict Monitoring"</strong> section above based on actual duplicate IPs from connected clients. Network issues are only shown when more than 3 PCs are connected.</p>
+        </div>
+    </div>
+
+    <!-- Recent Events Section -->
+    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="border-bottom: 2px solid #3498db; padding-bottom: 1rem; margin-bottom: 1.5rem;">📋 Recent Network Events</h2>
+        
+        {% if recent_events %}
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa;">
+                            <th style="text-align: left; padding: 1rem; border-bottom: 2px solid #e0e0e0;">Event Type</th>
+                            <th style="text-align: left; padding: 1rem; border-bottom: 2px solid #e0e0e0;">Severity</th>
+                            <th style="text-align: left; padding: 1rem; border-bottom: 2px solid #e0e0e0;">Description</th>
+                            <th style="text-align: left; padding: 1rem; border-bottom: 2px solid #e0e0e0;">Time</th>
+                            <th style="text-align: left; padding: 1rem; border-bottom: 2px solid #e0e0e0;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in recent_events %}
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 0.75rem;">{{ event.get_event_type_display }}</td>
+                                <td style="padding: 0.75rem;">
+                                    <span style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 12px; font-weight: bold; background-color: {% if event.severity == 'CRITICAL' %}#f8d7da{% elif event.severity == 'HIGH' %}#fff3cd{% else %}#d1ecf1{% endif %}; color: {% if event.severity == 'CRITICAL' %}#721c24{% elif event.severity == 'HIGH' %}#856404{% else %}#0c5460{% endif %};">
+                                        {{ event.severity }}
+                                    </span>
+                                </td>
+                                <td style="padding: 0.75rem; font-size: 12px;">{{ event.description|truncatewords:10 }}</td>
+                                <td style="padding: 0.75rem; font-size: 12px;">{{ event.timestamp|date:"H:i:s" }}</td>
+                                <td style="padding: 0.75rem;">
+                                    {% if event.resolved %}
+                                        <span style="color: #27ae60; font-weight: bold;">✓ Resolved</span>
+                                    {% else %}
+                                        <span style="color: #e74c3c; font-weight: bold;">⚠️ Active</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 1rem; text-align: right;">
+                <a href="{% url 'admin_panel:admin_network_logs' %}" style="color: #3498db; text-decoration: none; font-weight: bold;">View all events →</a>
+            </div>
+        {% else %}
+            <p style="color: #7f8c8d; text-align: center; padding: 2rem;">No network events recorded yet</p>
+        {% endif %}
+    </div>
+
+    <!-- AI CONGESTION PREDICTION SECTION -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 2rem; margin: 2rem 0; box-shadow: 0 8px 16px rgba(0,0,0,0.15); color: white;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <div>
+                <h2 style="margin: 0; font-size: 28px; font-weight: bold;">🤖 AI Congestion Prediction</h2>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 14px;">Machine Learning-powered network congestion forecasting</p>
+            </div>
+            {% if ai_prediction.status != 'error' %}
+                <div style="text-align: center; background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; backdrop-filter: blur(10px);">
+                    <div style="font-size: 12px; opacity: 0.9; margin-bottom: 0.5rem;">CONFIDENCE</div>
+                    <div style="font-size: 32px; font-weight: bold;">{{ ai_prediction.confidence_percentage }}%</div>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if ai_prediction.status != 'error' %}
+            <!-- Risk Level Display -->
+            <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; backdrop-filter: blur(10px);">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                    <!-- LOW Risk -->
+                    <div style="background: rgba(46, 213, 115, {% if ai_prediction.prediction == 'LOW' %}0.4{% else %}0.1{% endif %}); padding: 1rem; border-radius: 8px; border: 2px solid {% if ai_prediction.prediction == 'LOW' %}#2ed573{% else %}rgba(46, 213, 115, 0.3){% endif %}; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 0.5rem;">🟢</div>
+                        <div style="font-weight: bold; margin-bottom: 0.5rem;">LOW RISK</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.risk_level.low_probability }}%</div>
+                    </div>
+
+                    <!-- MEDIUM Risk -->
+                    <div style="background: rgba(255, 183, 77, {% if ai_prediction.prediction == 'MEDIUM' %}0.4{% else %}0.1{% endif %}); padding: 1rem; border-radius: 8px; border: 2px solid {% if ai_prediction.prediction == 'MEDIUM' %}#ffb74d{% else %}rgba(255, 183, 77, 0.3){% endif %}; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 0.5rem;">🟡</div>
+                        <div style="font-weight: bold; margin-bottom: 0.5rem;">MEDIUM RISK</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.risk_level.medium_probability }}%</div>
+                    </div>
+
+                    <!-- HIGH Risk -->
+                    <div style="background: rgba(244, 67, 54, {% if ai_prediction.prediction == 'HIGH' %}0.4{% else %}0.1{% endif %}); padding: 1rem; border-radius: 8px; border: 2px solid {% if ai_prediction.prediction == 'HIGH' %}#f44336{% else %}rgba(244, 67, 54, 0.3){% endif %}; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 0.5rem;">🔴</div>
+                        <div style="font-weight: bold; margin-bottom: 0.5rem;">HIGH RISK</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.risk_level.high_probability }}%</div>
+                    </div>
+                </div>
+
+                <!-- Current Prediction -->
+                {% if ai_prediction.prediction == 'HIGH' %}
+                    <div style="background: rgba(244, 67, 54, 0.9); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #fff; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">⚠️ HIGH CONGESTION PREDICTED</div>
+                        <div style="font-size: 14px; opacity: 0.95;">🔧 SELF-HEALING ACTIVATED - Network stabilization in progress</div>
+                    </div>
+                {% elif ai_prediction.prediction == 'MEDIUM' %}
+                    <div style="background: rgba(255, 183, 77, 0.9); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #fff; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">📊 MEDIUM CONGESTION RISK</div>
+                        <div style="font-size: 14px; opacity: 0.95;">Monitor traffic growth - prepare load balancing actions</div>
+                    </div>
+                {% else %}
+                    <div style="background: rgba(46, 213, 115, 0.9); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #fff; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 0.5rem;">✅ LOW CONGESTION RISK</div>
+                        <div style="font-size: 14px; opacity: 0.95;">Network operating normally - no immediate action required</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Current Metrics -->
+            <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px; backdrop-filter: blur(10px);">
+                <h3 style="margin: 0 0 1rem 0; font-size: 16px; font-weight: bold; opacity: 0.95;">📈 Current Traffic Metrics</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 6px; border-left: 3px solid #667eea;">
+                        <div style="font-size: 12px; opacity: 0.8; margin-bottom: 0.5rem;">Active Clients</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.current_metrics.active_clients }}/{{ ai_prediction.current_metrics.active_clients_threshold }}</div>
+                        <div style="font-size: 11px; opacity: 0.7; margin-top: 0.5rem;">{{ ai_prediction.current_metrics.active_clients_percentage }}% of capacity</div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 6px; border-left: 3px solid #667eea;">
+                        <div style="font-size: 12px; opacity: 0.8; margin-bottom: 0.5rem;">Requests/Second</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.current_metrics.requests_per_second }}</div>
+                        <div style="font-size: 11px; opacity: 0.7; margin-top: 0.5rem;">Request frequency</div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 6px; border-left: 3px solid #667eea;">
+                        <div style="font-size: 12px; opacity: 0.8; margin-bottom: 0.5rem;">Total Requests</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.current_metrics.total_requests }}</div>
+                        <div style="font-size: 11px; opacity: 0.7; margin-top: 0.5rem;">In last 5 minutes</div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 6px; border-left: 3px solid #667eea;">
+                        <div style="font-size: 12px; opacity: 0.8; margin-bottom: 0.5rem;">Looping Frequency</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.current_metrics.looping_frequency }}</div>
+                        <div style="font-size: 11px; opacity: 0.7; margin-top: 0.5rem;">Repeated requests ratio</div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 6px; border-left: 3px solid #667eea;">
+                        <div style="font-size: 12px; opacity: 0.8; margin-bottom: 0.5rem;">Avg Latency</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.current_metrics.average_latency_ms }}ms</div>
+                        <div style="font-size: 11px; opacity: 0.7; margin-top: 0.5rem;">Network delay</div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 6px; border-left: 3px solid #667eea;">
+                        <div style="font-size: 12px; opacity: 0.8; margin-bottom: 0.5rem;">High Severity Events</div>
+                        <div style="font-size: 20px; font-weight: bold;">{{ ai_prediction.current_metrics.high_severity_events }}</div>
+                        <div style="font-size: 11px; opacity: 0.7; margin-top: 0.5rem;">Active issues</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggested Actions -->
+            <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem; backdrop-filter: blur(10px);">
+                <h3 style="margin: 0 0 1rem 0; font-size: 16px; font-weight: bold; opacity: 0.95;">💡 Suggested Actions</h3>
+                <div style="font-size: 14px; line-height: 1.8;">
+                    {{ ai_prediction.suggested_action }}
+                </div>
+            </div>
+
+            <!-- Model Info -->
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 12px; opacity: 0.8;">
+                <span style="display: inline-block; margin-right: 2rem;">🧠 Model: {{ ai_prediction.model_type }}</span>
+                <span style="display: inline-block;">📊 Training Samples: {{ ai_prediction.training_samples_used }}</span>
+            </div>
+        {% else %}
+            <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 8px; text-align: center; backdrop-filter: blur(10px);">
+                <div style="font-size: 48px; margin-bottom: 1rem;">⚠️</div>
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 0.5rem;">Insufficient Data for Prediction</div>
+                <div style="font-size: 14px; opacity: 0.9;">The AI model needs more historical data to make accurate predictions. Continue monitoring network activity.</div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/admin_dashboard.js"></script>
+<script>
+function showStudentsModal() {
+    const students = {{ students_json|safe }};
+    let html = '<div style="padding: 1rem;"><h3 style="margin-top: 0;">Registered Students (' + students.length + ')</h3>';
+    html += '<div style="max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 5px; padding: 1rem; background-color: #f9f9f9;">';
+    if (students.length > 0) {
+        html += '<ol style="margin: 0; padding-left: 1.5rem;">';
+        students.forEach(function(student) {
+            html += '<li style="padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">' + student + '</li>';
+        });
+        html += '</ol>';
+    } else {
+        html += '<p style="color: #7f8c8d; text-align: center;">No students registered yet</p>';
+    }
+    html += '</div></div>';
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+    modal.innerHTML = '<div style="background: white; border-radius: 8px; padding: 2rem; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); color: #111827;">' + html + '<button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Close</button></div>';
+    document.body.appendChild(modal);
+}
+</script>
+{% endblock %}

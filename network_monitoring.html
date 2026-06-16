@@ -1,0 +1,599 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto; background: #f8fafc; color: #111827;">
+    <h1 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        🤖 AI Analysis Panel
+        <span id="refresh-indicator" style="font-size: 14px; color: #7f8c8d; margin-left: auto;">Updating...</span>
+    </h1>
+    
+    <!-- Navigation Bar -->
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <a href="{% url 'admin_panel:admin_dashboard' %}" style="padding: 0.5rem 1rem; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">← Dashboard</a>
+        <a href="{% url 'admin_panel:network_topology_visualization' %}" style="padding: 0.5rem 1rem; background-color: #16a085; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">🔗 Network Topology</a>
+        <a href="{% url 'admin_panel:admin_network_monitoring' %}" style="padding: 0.5rem 1rem; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">🌐 Network Monitoring</a>
+        
+        <!-- Auto Refresh Toggle -->
+        <div style="margin-left: auto; display: flex; gap: 0.5rem; align-items: center;">
+            <label style="font-weight: 500; margin-right: 0.5rem;">Auto Refresh:</label>
+            <input type="checkbox" id="auto-refresh-toggle" checked style="width: 20px; height: 20px; cursor: pointer;">
+            <span id="refresh-rate" style="color: #7f8c8d; font-size: 12px;">Every 3s</span>
+        </div>
+    </div>
+
+    <!-- Main AI Prediction Card -->
+    <div id="ai-prediction-card" style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem; border-left: 6px solid #95a5a6;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Left: Risk Level -->
+            <div>
+                <div style="font-size: 14px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 1rem;">Current Prediction</div>
+                
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 2rem; text-align: center;">
+                    <div id="risk-level-circle" style="width: 120px; height: 120px; border-radius: 50%; background: #95a5a6; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px;">
+                        -
+                    </div>
+                    
+                    <div style="font-size: 28px; font-weight: bold; margin-bottom: 0.5rem;" id="risk-text">LOADING</div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <span style="font-size: 14px; color: #7f8c8d;">Confidence:</span>
+                        <span id="confidence-score" style="font-size: 18px; font-weight: bold; color: #2c3e50;">--%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right: Reasoning Summary -->
+            <div>
+                <div style="font-size: 14px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 1rem;">AI Reasoning</div>
+                
+                <div id="reasoning-box" style="background: #f8f9fa; border-radius: 8px; padding: 1.5rem; min-height: 150px; font-size: 14px; line-height: 1.6; color: #2c3e50;">
+                    <p style="margin: 0; color: #7f8c8d; font-style: italic;">Loading AI analysis...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Explanation -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 2rem;">
+        <div style="font-size: 14px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 1rem;">📊 Anomaly Detection</div>
+        <div id="anomaly-box" style="background: #f8f9fa; border-radius: 8px; padding: 1rem; font-size: 13px; line-height: 1.6; color: #2c3e50;">
+            <p style="margin: 0; color: #7f8c8d; font-style: italic;">Analyzing network behavior...</p>
+        </div>
+    </div>
+
+    <!-- Contributing Factors -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem;">
+        <div style="font-size: 14px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 1rem;">
+            🔍 Contributing Factors <span id="factor-count" style="background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">0</span>
+        </div>
+        
+        <div id="factors-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; text-align: center; color: #7f8c8d; font-style: italic;">
+                Loading contributing factors...
+            </div>
+        </div>
+    </div>
+
+    <!-- Real Network Metrics -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem;">
+        <div style="font-size: 14px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 1rem;">📈 Real Network Metrics</div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem;">
+            <!-- Metric 1: Requests Per Second -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Requests/Sec</div>
+                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" id="metric-rps">-</div>
+                <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">req/sec</div>
+            </div>
+            
+            <!-- Metric 2: Active Clients -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Active Clients</div>
+                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" id="metric-clients">-</div>
+                <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">clients connected</div>
+            </div>
+            
+            <!-- Metric 3: Looping Frequency -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Looping Freq</div>
+                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" id="metric-looping">-</div>
+                <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">% repeated</div>
+            </div>
+            
+            <!-- Metric 4: Average Latency -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Avg Latency</div>
+                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" id="metric-latency">-</div>
+                <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">milliseconds</div>
+            </div>
+            
+            <!-- Metric 5: Failed Nodes -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Failed Nodes</div>
+                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" id="metric-failed">-</div>
+                <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">nodes failed</div>
+            </div>
+            
+            <!-- Metric 6: Bandwidth Usage -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Bandwidth</div>
+                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" id="metric-bandwidth">-</div>
+                <div style="font-size: 11px; color: #7f8c8d; margin-top: 0.5rem;">usage</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Node Health Status -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 2rem;">
+        <div style="font-size: 14px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 1rem;">🟢 Node Health Status</div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem;">
+            <!-- Active Nodes -->
+            <div style="background: #f0fdf4; border-radius: 8px; padding: 1.5rem; border-left: 4px solid #27ae60;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Active</div>
+                <div style="font-size: 28px; font-weight: bold; color: #27ae60;" id="node-active">-</div>
+            </div>
+            
+            <!-- Inactive Nodes -->
+            <div style="background: #fffbf0; border-radius: 8px; padding: 1.5rem; border-left: 4px solid #f39c12;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Inactive</div>
+                <div style="font-size: 28px; font-weight: bold; color: #f39c12;" id="node-inactive">-</div>
+            </div>
+            
+            <!-- Failed Nodes -->
+            <div style="background: #fef2f2; border-radius: 8px; padding: 1.5rem; border-left: 4px solid #e74c3c;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Failed</div>
+                <div style="font-size: 28px; font-weight: bold; color: #e74c3c;" id="node-failed">-</div>
+            </div>
+            
+            <!-- Total Nodes -->
+            <div style="background: #f0f4f8; border-radius: 8px; padding: 1.5rem; border-left: 4px solid #3498db;">
+                <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 0.5rem;">Total</div>
+                <div style="font-size: 28px; font-weight: bold; color: #3498db;" id="node-total">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis JavaScript -->
+<script>
+// ============================================================================
+// EXPLAINABLE AI ANALYSIS PANEL
+// ============================================================================
+// This script manages the AI analysis display
+// Data is fetched from API endpoint using REAL backend metrics
+
+const AI_CONFIG = {
+    apiUrl: "{% url 'admin_panel:api_explainable_ai_analysis' %}",
+    refreshInterval: 3000,  // 3 seconds
+    autoRefresh: true,
+};
+
+let aiRefreshTimer = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🤖 AI Analysis Panel Initializing...');
+    console.log(`  - API URL: ${AI_CONFIG.apiUrl}`);
+    console.log(`  - Refresh Interval: ${AI_CONFIG.refreshInterval}ms`);
+    
+    // Load initial AI analysis data
+    loadAIAnalysis();
+    
+    // Setup auto-refresh
+    setupAutoRefresh();
+    
+    // Setup refresh toggle
+    const toggleElement = document.getElementById('auto-refresh-toggle');
+    if (toggleElement) {
+        toggleElement.addEventListener('change', function() {
+            AI_CONFIG.autoRefresh = this.checked;
+            console.log(`Auto-refresh: ${this.checked ? 'ENABLED' : 'DISABLED'}`);
+            if (AI_CONFIG.autoRefresh) {
+                setupAutoRefresh();
+            } else {
+                if (aiRefreshTimer) {
+                    clearInterval(aiRefreshTimer);
+                    aiRefreshTimer = null;
+                }
+            }
+        });
+    } else {
+        console.warn('⚠️ Element auto-refresh-toggle not found');
+    }
+    
+    console.log('✓ AI Analysis Panel Ready');
+});
+
+/**
+ * Load AI analysis data from API
+ */
+function loadAIAnalysis() {
+    console.log('📡 Fetching AI analysis...');
+    console.log('  API URL:', AI_CONFIG.apiUrl);
+    
+    fetch(AI_CONFIG.apiUrl, {
+        method: 'GET',
+        credentials: 'include',  // Send cookies for authentication
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        }
+    })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response type:', response.type);
+            console.log('Response headers:', response.headers.get('content-type'));
+            
+            // Check if response is ok
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('Unauthorized - Admin access required (403)');
+                } else if (response.status === 404) {
+                    throw new Error('API endpoint not found (404) - URL: ' + AI_CONFIG.apiUrl);
+                } else {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+            }
+            
+            // Try to parse as JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Invalid content type: ${contentType}. Expected application/json`);
+            }
+            
+            return response.json();
+        })
+        .then(data => {
+            console.log('✓ AI analysis data received:', data);
+            
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid data format received from API');
+            }
+            
+            if (data.success === false) {
+                console.error('❌ API Error:', data.message);
+                showError('API Error: ' + (data.message || 'Unknown error'));
+                return;
+            }
+            
+            if (data.success === true) {
+                console.log('✓ Processing AI analysis data...');
+                updateAIPrediction(data);
+                updateContributingFactors(data);
+                updateRealMetrics(data);
+                updateNodeHealth(data);
+                updateLastUpdate();
+            } else {
+                console.warn('⚠️ Unexpected response format:', data);
+                showError('Unexpected response format from API');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Fetch Error:', error.message);
+            console.error('Full error:', error);
+            showError('Network error: ' + error.message);
+        });
+}
+
+/**
+ * Update AI prediction display
+ */
+function updateAIPrediction(data) {
+    console.log('📊 Updating AI prediction display...');
+    const prediction = data.prediction;
+    const color = data.color;
+    const reasoning = data.reasoning_summary;
+    const anomaly = data.anomaly_explanation;
+    
+    console.log(`  - Risk Level: ${prediction.risk_level}`);
+    console.log(`  - Confidence: ${prediction.confidence}%`);
+    
+    // Update risk level circle and text
+    const riskCircle = document.getElementById('risk-level-circle');
+    const riskText = document.getElementById('risk-text');
+    const confidenceScore = document.getElementById('confidence-score');
+    const reasoningBox = document.getElementById('reasoning-box');
+    const anomalyBox = document.getElementById('anomaly-box');
+    const predictionCard = document.getElementById('ai-prediction-card');
+    
+    if (!riskCircle) console.warn('⚠️ Element risk-level-circle not found');
+    if (!riskText) console.warn('⚠️ Element risk-text not found');
+    if (!confidenceScore) console.warn('⚠️ Element confidence-score not found');
+    if (!reasoningBox) console.warn('⚠️ Element reasoning-box not found');
+    if (!anomalyBox) console.warn('⚠️ Element anomaly-box not found');
+    if (!predictionCard) console.warn('⚠️ Element ai-prediction-card not found');
+    
+    // Update circle color based on risk
+    if (riskCircle) {
+        riskCircle.style.background = color.hex;
+        riskCircle.textContent = prediction.risk_level === 'HIGH' ? '⚠️' : prediction.risk_level === 'MEDIUM' ? '⊘' : '✓';
+    }
+    
+    // Update risk text
+    if (riskText) {
+        riskText.textContent = prediction.risk_level;
+        riskText.style.color = color.hex;
+    }
+    
+    // Update confidence
+    if (confidenceScore) {
+        confidenceScore.textContent = prediction.confidence + '%';
+    }
+    
+    // Update card border color
+    if (predictionCard) {
+        predictionCard.style.borderLeftColor = color.hex;
+    }
+    
+    // Update reasoning
+    if (reasoningBox) {
+        reasoningBox.innerHTML = `<p style="margin: 0; font-size: 14px; line-height: 1.6;">${reasoning}</p>`;
+    }
+    
+    // Update anomaly explanation
+    if (anomalyBox) {
+        anomalyBox.innerHTML = `<p style="margin: 0; font-size: 13px; line-height: 1.6; color: #2c3e50;">${anomaly}</p>`;
+    }
+    
+    console.log(`✓ Risk Level: ${prediction.risk_level} (${prediction.confidence}% confidence)`);
+}
+
+/**
+ * Update contributing factors display
+ */
+function updateContributingFactors(data) {
+    console.log('📋 Updating contributing factors...');
+    const factors = data.contributing_factors;
+    const container = document.getElementById('factors-container');
+    const factorCount = document.getElementById('factor-count');
+    
+    if (!container) {
+        console.warn('⚠️ Element factors-container not found');
+        return;
+    }
+    
+    if (!factorCount) {
+        console.warn('⚠️ Element factor-count not found');
+    } else {
+        factorCount.textContent = factors.length;
+    }
+    
+    console.log(`  - Found ${factors.length} factors`);
+    
+    if (factors.length === 0) {
+        container.innerHTML = `<div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; text-align: center; color: #7f8c8d; grid-column: 1/-1;">
+            No significant contributing factors detected. Network operating normally.
+        </div>`;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    factors.forEach((factor, index) => {
+        console.log(`    ${index + 1}. ${factor.factor} (${factor.severity})`);
+        // Determine severity color
+        let severityColor = '#95a5a6';
+        let severityBg = '#f0f0f0';
+        
+        if (factor.severity === 'HIGH') {
+            severityColor = '#e74c3c';
+            severityBg = '#fef2f2';
+        } else if (factor.severity === 'MEDIUM') {
+            severityColor = '#f39c12';
+            severityBg = '#fffbf0';
+        }
+        
+        const factorCard = document.createElement('div');
+        factorCard.style.cssText = `
+            background: ${severityBg};
+            border-radius: 8px;
+            padding: 1.5rem;
+            border-left: 4px solid ${severityColor};
+        `;
+        
+        factorCard.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div style="font-weight: bold; color: ${severityColor}; font-size: 16px;">
+                    ${factor.severity === 'HIGH' ? '🔴' : '🟠'}
+                </div>
+                <div style="font-weight: bold; color: #2c3e50; font-size: 13px;">
+                    ${factor.factor}
+                </div>
+            </div>
+            <div style="background: white; border-radius: 4px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                <div style="font-size: 18px; font-weight: bold; color: ${severityColor};">
+                    ${factor.value} <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">${factor.unit}</span>
+                </div>
+                ${factor.threshold ? `<div style="font-size: 11px; color: #7f8c8d;">Threshold: ${factor.threshold} ${factor.unit}</div>` : ''}
+            </div>
+            <div style="font-size: 12px; line-height: 1.5; color: #2c3e50;">
+                ${factor.explanation}
+            </div>
+        `;
+        
+        container.appendChild(factorCard);
+    });
+    
+    console.log('✓ Contributing factors updated');
+}
+
+/**
+ * Update real network metrics display
+ */
+function updateRealMetrics(data) {
+    console.log('📈 Updating real metrics...');
+    
+    if (!data.risk_indicators) {
+        console.warn('⚠️ No risk_indicators in response data');
+        return;
+    }
+    
+    const metrics = data.risk_indicators;
+    console.log('Metrics:', metrics);
+    
+    const elements = {
+        'metric-rps': () => {
+            const val = metrics.requests_per_second;
+            return val !== undefined && val !== null ? val.toFixed(3) : '-';
+        },
+        'metric-clients': () => {
+            const val = metrics.active_clients;
+            return val !== undefined && val !== null ? val : '-';
+        },
+        'metric-looping': () => {
+            const val = metrics.looping_frequency;
+            return val !== undefined && val !== null ? (val * 100).toFixed(2) : '-';
+        },
+        'metric-latency': () => {
+            const val = metrics.average_latency_ms;
+            return val !== undefined && val !== null ? val.toFixed(0) : '-';
+        },
+        'metric-failed': () => {
+            const val = metrics.failed_nodes;
+            return val !== undefined && val !== null ? val : '-';
+        },
+        'metric-bandwidth': () => {
+            const val = metrics.bandwidth_usage;
+            return val !== undefined && val !== null ? val.toFixed(2) : '-';
+        },
+    };
+    
+    for (const [elementId, getValue] of Object.entries(elements)) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            try {
+                const value = getValue();
+                element.textContent = value;
+                console.log(`  ✓ ${elementId}: ${value}`);
+            } catch (e) {
+                console.warn(`⚠️ Error updating ${elementId}:`, e);
+                element.textContent = '-';
+            }
+        } else {
+            console.warn(`⚠️ Element ${elementId} not found`);
+        }
+    }
+    
+    console.log('✓ Real metrics updated');
+}
+
+/**
+ * Update node health status
+ */
+function updateNodeHealth(data) {
+    console.log('🏥 Updating node health status...');
+    
+    // Check if node_health data exists
+    if (!data.node_health) {
+        console.log('  - No node_health data in response, skipping');
+        return;
+    }
+    
+    const active = data.node_health?.active || 0;
+    const inactive = data.node_health?.inactive || 0;
+    const failed = data.node_health?.failed || 0;
+    const total = data.node_health?.total || 0;
+    
+    const elements = {
+        'node-active': active,
+        'node-inactive': inactive,
+        'node-failed': failed,
+        'node-total': total,
+    };
+    
+    for (const [elementId, value] of Object.entries(elements)) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = value;
+        } else {
+            console.warn(`⚠️ Element ${elementId} not found`);
+        }
+    }
+    
+    console.log(`✓ Node Health: Active=${active}, Inactive=${inactive}, Failed=${failed}, Total=${total}`);
+}
+
+/**
+ * Update last update timestamp
+ */
+function updateLastUpdate() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
+    const refreshIndicator = document.getElementById('refresh-indicator');
+    
+    if (refreshIndicator) {
+        refreshIndicator.textContent = '✓ Updated ' + timeStr;
+    }
+    
+    console.log(`⏱️ Updated at ${timeStr}`);
+    
+    setTimeout(() => {
+        if (refreshIndicator) {
+            refreshIndicator.textContent = 'Updating...';
+        }
+    }, 2000);
+}
+
+/**
+ * Setup auto-refresh interval
+ */
+function setupAutoRefresh() {
+    if (aiRefreshTimer) clearInterval(aiRefreshTimer);
+    
+    if (AI_CONFIG.autoRefresh) {
+        console.log('🔄 Auto-refresh enabled every ' + (AI_CONFIG.refreshInterval / 1000) + 's');
+        aiRefreshTimer = setInterval(loadAIAnalysis, AI_CONFIG.refreshInterval);
+    }
+}
+
+/**
+ * Show error message
+ */
+function showError(message) {
+    console.error('🔴 Error:', message);
+    const reasoningBox = document.getElementById('reasoning-box');
+    if (reasoningBox) {
+        reasoningBox.innerHTML = `<div style="color: #e74c3c; font-weight: bold;">❌ Error: ${message}</div>`;
+    }
+    
+    const riskText = document.getElementById('risk-text');
+    if (riskText) {
+        riskText.textContent = 'ERROR';
+        riskText.style.color = '#e74c3c';
+    }
+    
+    const riskCircle = document.getElementById('risk-level-circle');
+    if (riskCircle) {
+        riskCircle.style.background = '#e74c3c';
+        riskCircle.textContent = '⚠️';
+    }
+}
+
+console.log('✓ AI Analysis Panel script loaded');
+
+</script>
+
+<style>
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        #ai-prediction-card {
+            grid-template-columns: 1fr !important;
+        }
+        
+        #factors-container {
+            grid-template-columns: 1fr !important;
+        }
+        
+        h1 {
+            font-size: 24px !important;
+        }
+    }
+    
+    /* Smooth transitions */
+    * {
+        transition: color 0.2s, background-color 0.2s;
+    }
+</style>
+{% endblock %}

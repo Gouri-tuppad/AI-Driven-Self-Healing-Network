@@ -1,0 +1,925 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .network-monitoring-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .header-section {
+        margin-bottom: 2rem;
+    }
+    
+    .status-banner {
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    
+    .status-normal {
+        background-color: #d4edda;
+        border: 2px solid #28a745;
+        color: #155724;
+    }
+    
+    .status-critical {
+        background-color: #f8d7da;
+        border: 2px solid #dc3545;
+        color: #721c24;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .stat-unit {
+        font-size: 14px;
+        color: #7f8c8d;
+        margin-left: 0.5rem;
+    }
+    
+    .section-title {
+        font-size: 22px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 2rem 0 1rem 0;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 0.5rem;
+    }
+    
+    .issues-container {
+        margin-bottom: 2rem;
+    }
+    
+    .issue-card {
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        border-left: 5px solid;
+        padding: 1.5rem;
+        background: white;
+    }
+    
+    .issue-critical {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+        border: 1px solid #f8d7da;
+    }
+    
+    .issue-warning {
+        border-left-color: #ffc107;
+        background-color: #fffbf0;
+        border: 1px solid #fff3cd;
+    }
+    
+    .issue-info {
+        border-left-color: #17a2b8;
+        background-color: #f0f8f9;
+        border: 1px solid #d1ecf1;
+    }
+    
+    .issue-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .issue-critical .issue-title {
+        color: #721c24;
+    }
+    
+    .issue-warning .issue-title {
+        color: #856404;
+    }
+    
+    .issue-info .issue-title {
+        color: #0c5460;
+    }
+    
+    .issue-description {
+        margin: 0.5rem 0;
+        font-size: 14px;
+    }
+    
+    .issue-critical .issue-description {
+        color: #721c24;
+    }
+    
+    .issue-warning .issue-description {
+        color: #856404;
+    }
+    
+    .issue-info .issue-description {
+        color: #0c5460;
+    }
+    
+    .severity-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: auto;
+    }
+    
+    .severity-critical {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .severity-warning {
+        background-color: #ffc107;
+        color: black;
+    }
+    
+    .severity-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .connected-pcs-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .connected-pcs-table thead {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .connected-pcs-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: bold;
+        color: #2c3e50;
+        font-size: 14px;
+        text-transform: uppercase;
+    }
+    
+    .connected-pcs-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .connected-pcs-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .node-status-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .node-status-table thead {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .node-status-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: bold;
+        color: #2c3e50;
+        font-size: 14px;
+        text-transform: uppercase;
+    }
+    
+    .node-status-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .node-status-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .health-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    
+    .health-healthy {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .health-unhealthy {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 24px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background-color: #28a745;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .no-data {
+        padding: 2rem;
+        text-align: center;
+        color: #7f8c8d;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+    
+    .refresh-info {
+        text-align: center;
+        margin: 1rem 0;
+        font-size: 12px;
+        color: #7f8c8d;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #7f8c8d;
+    }
+    
+    .back-link {
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+    
+    .back-link a {
+        color: #3498db;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .back-link a:hover {
+        text-decoration: underline;
+    }
+    
+    /* Looping Detection Styles */
+    .looping-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .looping-table thead {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .looping-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: bold;
+        color: #2c3e50;
+        font-size: 14px;
+        text-transform: uppercase;
+    }
+    
+    .looping-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .looping-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .severity-badge-looping {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        text-align: center;
+        min-width: 70px;
+    }
+    
+    .severity-critical-badge {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .severity-high-badge {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .severity-medium-badge {
+        background-color: #ffc107;
+        color: black;
+    }
+    
+    .severity-low-badge {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .looping-detected-banner {
+        background-color: #f8d7da;
+        border: 2px solid #dc3545;
+        color: #721c24;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .looping-stat-card {
+        background: white;
+        border-left: 5px solid;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .looping-stat-critical {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    
+    .looping-stat-high {
+        border-left-color: #fd7e14;
+        background-color: #fff8f0;
+    }
+    
+    .looping-stat-medium {
+        border-left-color: #ffc107;
+        background-color: #fffbf0;
+    }
+    
+    .looping-stat-low {
+        border-left-color: #17a2b8;
+        background-color: #f0f8f9;
+    }
+    
+    .stat-grid-horizontal {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-item {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .stat-item-value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-item-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+</style>
+
+<div class="network-monitoring-container">
+    <div class="back-link">
+        <a href="{% url 'admin_panel:admin_dashboard' %}">← Back to Dashboard</a>
+    </div>
+    
+    <div class="header-section">
+        <h1>🌐 Network Monitoring</h1>
+        <p style="color: #7f8c8d; margin-top: 0.5rem;">Real-time monitoring of connected PCs and network health</p>
+    </div>
+    
+    <!-- Status Banner -->
+    <div id="status-banner" class="status-banner status-normal">
+        <div>
+            <span id="status-text">🟢 Network Status: NORMAL</span>
+        </div>
+        <div id="last-update" style="font-size: 12px; color: inherit;">Last updated: Just now</div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Active Connections</div>
+            <div class="stat-value" id="active-connections">0<span class="stat-unit">/ 3</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Network Issues</div>
+            <div class="stat-value" id="issue-count" style="color: #dc3545;">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Healthy Nodes</div>
+            <div class="stat-value" id="healthy-nodes">0<span class="stat-unit">/ 0</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Capacity Used</div>
+            <div class="stat-value" id="capacity-used">0%</div>
+        </div>
+    </div>
+    
+    <!-- Network Issues Section -->
+    <div class="section-title">🚨 Network Issues</div>
+    <div class="issues-container" id="issues-container">
+        <div class="no-data">No network issues detected. All systems operating normally.</div>
+    </div>
+    
+    <!-- Connected PCs Section -->
+    <div class="section-title">💻 Connected PCs (Real-time)</div>
+    <div id="connected-pcs-section">
+        <table class="connected-pcs-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Student ID</th>
+                    <th>IP Address</th>
+                    <th>Server Node</th>
+                    <th>Connected At</th>
+                    <th>Duration</th>
+                    <th>Last Activity</th>
+                </tr>
+            </thead>
+            <tbody id="connected-pcs-tbody">
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: #7f8c8d;">No connected PCs</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Server Nodes Status Section -->
+    <div class="section-title">🖥️ Server Nodes Status</div>
+    <div id="nodes-section">
+        <table class="node-status-table">
+            <thead>
+                <tr>
+                    <th>Node Name</th>
+                    <th>IP Address</th>
+                    <th>Status</th>
+                    <th>Connections</th>
+                    <th>Utilization</th>
+                    <th>Connected Students</th>
+                </tr>
+            </thead>
+            <tbody id="nodes-tbody">
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #7f8c8d;">Loading server nodes...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Network Looping Detection Section -->
+    <div class="section-title">🔄 Network Looping Detection</div>
+    <div id="looping-statistics-section">
+        <div class="stat-grid-horizontal">
+            <div class="stat-item">
+                <div class="stat-item-label">Total Requests</div>
+                <div class="stat-item-value" id="total-requests-stat">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-item-label">Unique IPs</div>
+                <div class="stat-item-value" id="unique-ips-stat">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-item-label">Looping Issues</div>
+                <div class="stat-item-value" id="looping-issues-count-stat" style="color: #dc3545;">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-item-label">Critical Issues</div>
+                <div class="stat-item-value" id="critical-issues-count-stat" style="color: #dc3545;">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="looping-issues-banner" style="display: none;">
+        <div class="looping-detected-banner">
+            <span>⚠️ LOOPING ISSUE DETECTED - Excessive request frequency from client(s)</span>
+        </div>
+    </div>
+    
+    <div id="looping-issues-section">
+        <table class="looping-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>IP Address</th>
+                    <th>Request Count</th>
+                    <th>Time Window</th>
+                    <th>Frequency (req/s)</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="looping-tbody">
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: #7f8c8d;">✓ No looping issues detected</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="refresh-info">
+        ⟳ Auto-refreshing every 3 seconds | Last updated: <span id="refresh-timestamp">--:--:--</span>
+    </div>
+</div>
+
+<script>
+    // Auto-refresh network monitoring data every 3 seconds
+    const REFRESH_INTERVAL = 3000;
+    
+    async function updateNetworkMonitoring() {
+        try {
+            const [healthResponse, issuesResponse, nodesResponse, pcsResponse, loopingResponse] = await Promise.all([
+                fetch('{% url "admin_panel:api_network_health" %}'),
+                fetch('{% url "admin_panel:api_network_issues" %}'),
+                fetch('{% url "admin_panel:api_server_nodes_status" %}'),
+                fetch('{% url "admin_panel:api_connected_pcs" %}'),
+                fetch('{% url "admin_panel:api_looping_detection" %}')
+            ]);
+            
+            const health = await healthResponse.json();
+            const issues = await issuesResponse.json();
+            const nodes = await nodesResponse.json();
+            const pcs = await pcsResponse.json();
+            const looping = await loopingResponse.json();
+            
+            updateStatusBanner(health);
+            updateStatistics(health, nodes);
+            updateIssuesDisplay(issues);
+            updateConnectedPCs(pcs);
+            updateNodesStatus(nodes);
+            updateLoopingDetection(looping);
+            updateTimestamp();
+            
+        } catch (error) {
+            console.error('Error updating network monitoring:', error);
+        }
+    }
+    
+    function updateStatusBanner(health) {
+        const banner = document.getElementById('status-banner');
+        const statusText = document.getElementById('status-text');
+        
+        if (health.overall_status === 'CRITICAL') {
+            banner.className = 'status-banner status-critical';
+            statusText.textContent = '🔴 Network Status: CRITICAL - CAPACITY EXCEEDED';
+        } else {
+            banner.className = 'status-banner status-normal';
+            statusText.textContent = '🟢 Network Status: NORMAL';
+        }
+    }
+    
+    function updateStatistics(health, nodes) {
+        const maxCapacity = health.max_capacity;
+        const currentConnections = health.total_active_connections;
+        const capacityPercent = Math.round((currentConnections / maxCapacity) * 100);
+        
+        document.getElementById('active-connections').innerHTML = 
+            `${currentConnections}<span class="stat-unit">/ ${maxCapacity}</span>`;
+        document.getElementById('issue-count').textContent = health.issue_count;
+        document.getElementById('healthy-nodes').innerHTML = 
+            `${nodes.healthy_nodes}<span class="stat-unit">/ ${nodes.total_nodes}</span>`;
+        document.getElementById('capacity-used').textContent = `${capacityPercent}%`;
+    }
+    
+    function updateIssuesDisplay(issuesData) {
+        const container = document.getElementById('issues-container');
+        
+        if (!issuesData.issues || issuesData.issues.length === 0) {
+            container.innerHTML = '<div class="no-data">✓ No network issues detected. All systems operating normally.</div>';
+            return;
+        }
+        
+        let html = '';
+        issuesData.issues.forEach(issue => {
+            const severityClass = issue.severity.toLowerCase();
+            const issueClass = `issue-${severityClass}`;
+            
+            html += `
+                <div class="issue-card ${issueClass}">
+                    <div class="issue-title">
+                        ${getIssueEmoji(issue.type)} ${issue.type}
+                        <span class="severity-badge severity-${severityClass}">
+                            ${issue.severity}
+                        </span>
+                    </div>
+                    <div class="issue-description">
+                        ${issue.description}
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    function getIssueEmoji(type) {
+        const emojis = {
+            'CONGESTION': '🔴',
+            'IP_CONFLICT': '⚠️',
+            'NODE_FAILURE': '❌',
+            'LOAD_BALANCING': '💡'
+        };
+        return emojis[type] || '⚠️';
+    }
+    
+    function updateConnectedPCs(pcsData) {
+        const tbody = document.getElementById('connected-pcs-tbody');
+        
+        if (!pcsData.connected_pcs || pcsData.connected_pcs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #7f8c8d;">No connected PCs</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        pcsData.connected_pcs.forEach(pc => {
+            // Times are already in IST format from API
+            const duration = formatDuration(pc.duration_seconds);
+            
+            html += `
+                <tr>
+                    <td><strong>${pc.username}</strong></td>
+                    <td>${pc.student_id}</td>
+                    <td><code>${pc.ip_address}</code></td>
+                    <td>${pc.server_node}</td>
+                    <td><small>${pc.connected_at}</small></td>
+                    <td>${duration}</td>
+                    <td><small>${pc.last_activity}</small></td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    function updateNodesStatus(nodesData) {
+        const tbody = document.getElementById('nodes-tbody');
+        
+        if (!nodesData.server_nodes || nodesData.server_nodes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #7f8c8d;">No server nodes configured</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        nodesData.server_nodes.forEach(node => {
+            const healthClass = node.is_healthy ? 'health-healthy' : 'health-unhealthy';
+            const healthText = node.is_healthy ? '✓ Healthy' : '✗ Failed';
+            const utilizationPercent = node.utilization_percent;
+            const progressColor = utilizationPercent > 80 ? '#dc3545' : (utilizationPercent > 50 ? '#ffc107' : '#28a745');
+            
+            const students = node.connected_students && node.connected_students.length > 0 
+                ? node.connected_students.join(', ')
+                : '(None)';
+            
+            html += `
+                <tr>
+                    <td><strong>${node.name}</strong></td>
+                    <td><code>${node.ip_address}</code></td>
+                    <td><span class="health-badge ${healthClass}">${healthText}</span></td>
+                    <td>${node.current_connections}/${node.max_capacity}</td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${utilizationPercent}%; background-color: ${progressColor};">
+                                ${utilizationPercent}%
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-size: 12px;">${students}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    function updateLoopingDetection(loopingData) {
+        // Update statistics
+        if (loopingData.statistics) {
+            document.getElementById('total-requests-stat').textContent = loopingData.statistics.total_requests;
+            document.getElementById('unique-ips-stat').textContent = loopingData.statistics.unique_ips;
+            document.getElementById('looping-issues-count-stat').textContent = loopingData.total_issues;
+            document.getElementById('critical-issues-count-stat').textContent = loopingData.critical_issues;
+        }
+        
+        // Update looping issues banner
+        const banner = document.getElementById('looping-issues-banner');
+        if (loopingData.total_issues > 0) {
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+        }
+        
+        // Update looping issues table
+        const tbody = document.getElementById('looping-tbody');
+        
+        if (!loopingData.looping_issues || loopingData.looping_issues.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #7f8c8d;">✓ No looping issues detected</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        loopingData.looping_issues.forEach(issue => {
+            const severityClass = `severity-${issue.severity.toLowerCase()}-badge`;
+            const severityEmoji = {
+                'CRITICAL': '🚨',
+                'HIGH': '⚠️',
+                'MEDIUM': '⚡',
+                'LOW': 'ℹ️'
+            }[issue.severity] || '⚠️';
+            
+            const status = issue.severity === 'CRITICAL' ? '🔴 CRITICAL' : 
+                          issue.severity === 'HIGH' ? '🟠 HIGH' :
+                          issue.severity === 'MEDIUM' ? '🟡 MEDIUM' : '🟢 LOW';
+            
+            html += `
+                <tr>
+                    <td><strong>${issue.username}</strong></td>
+                    <td><code>${issue.ip_address}</code></td>
+                    <td><strong>${issue.request_count}</strong></td>
+                    <td>${issue.time_window_seconds}s</td>
+                    <td><strong>${issue.request_frequency}</strong></td>
+                    <td><span class="severity-badge-looping ${severityClass}">${severityEmoji} ${issue.severity}</span></td>
+                    <td>${status}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    function formatDuration(seconds) {
+        if (seconds < 60) return seconds + 's';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + 'm';
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return hours + 'h ' + mins + 'm';
+    }
+    
+    function updateTimestamp() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        document.getElementById('refresh-timestamp').textContent = timeString;
+        document.getElementById('last-update').textContent = `Last updated: ${timeString}`;
+    }
+    
+    // Initial load and set up auto-refresh
+    updateNetworkMonitoring();
+    setInterval(updateNetworkMonitoring, REFRESH_INTERVAL);
+</script>
+{% endblock %}
+    }
+    
+    html += '</table>';
+    container.innerHTML = html;
+}
+
+function displayNetworkIssues(data) {
+    const container = document.getElementById('network-issues-container');
+    
+    if (data.total_issues === 0) {
+        container.innerHTML = '<p style="color: green;"><strong>✓ No active network issues</strong></p>';
+        return;
+    }
+    
+    let html = `<p><strong>Active Issues: ${data.total_issues}</strong></p>`;
+    html += '<div>';
+    
+    for (let issue of data.issues) {
+        const severityColors = {
+            'CRITICAL': '#ff6b6b',
+            'HIGH': '#ffa94d',
+            'MEDIUM': '#ffd43b',
+            'LOW': '#b3e5fc'
+        };
+        const bgColor = severityColors[issue.severity] || '#e0e0e0';
+        
+        html += `<div style="background-color: ${bgColor}; padding: 1rem; margin-bottom: 0.5rem; border-radius: 5px; border-left: 4px solid #333;">`;
+        html += `<strong>[${issue.type}]</strong> Severity: ${issue.severity}<br>`;
+        html += `<p>${issue.description}</p>`;
+        html += `</div>`;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function triggerLoadBalance() {
+    try {
+        document.getElementById('load-balance-btn').disabled = true;
+        const response = await fetch('{% url "admin_panel:api_load_balance" %}', {method: 'POST'});
+        const data = await response.json();
+        alert('Load balancing completed:\n' + JSON.stringify(data.server_distribution, null, 2));
+        refreshNetworkStatus();
+    } catch (error) {
+        alert('Error triggering load balance: ' + error);
+    } finally {
+        document.getElementById('load-balance-btn').disabled = false;
+    }
+}
+
+function refreshNetworkStatus() {
+    fetchNetworkStatus();
+    fetchServerNodes();
+    fetchNetworkIssues();
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshNetworkStatus();
+    // Auto-refresh every 10 seconds
+    setInterval(refreshNetworkStatus, 10000);
+});
+</script>
+
+<style>
+    button {
+        padding: 0.5rem 1rem;
+        margin-right: 0.5rem;
+        cursor: pointer;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+    }
+    button:hover:not(:disabled) {
+        background-color: #0056b3;
+    }
+    button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+    table {
+        margin-top: 1rem;
+    }
+    th, td {
+        text-align: left;
+    }
+</style>
+{% endblock %}

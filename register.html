@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto; background: #f8fafc; color: #111827;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="margin: 0;">⏱️ Self-Healing Timeline</h1>
+        <div style="font-size: 12px; color: #7f8c8d;">
+            Last updated: <span id="lastUpdate">Just now</span>
+        </div>
+    </div>
+
+    <!-- Error Display -->
+    {% if error %}
+    <div style="background-color: #fee; border: 1px solid #f00; color: #c33; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+        <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Summary Statistics -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #e74c3c;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Total Events</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;" id="totalEvents">{{ total_events }}</div>
+        </div>
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #e74c3c;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Failures Detected</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;" id="failureCount">{{ failure_events }}</div>
+        </div>
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #27ae60;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Recoveries Completed</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;" id="recoveryCount">{{ recovery_events_count }}</div>
+        </div>
+        <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #3498db;">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold;">Active Nodes</div>
+            <div style="font-size: 36px; font-weight: bold; color: #2c3e50; margin: 0.5rem 0;" id="activeNodes">{{ active_nodes }}</div>
+        </div>
+    </div>
+
+    <!-- Auto-Refresh Toggle -->
+    <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <label style="display: flex; align-items: center; gap: 1rem; cursor: pointer; font-weight: bold;">
+            <input type="checkbox" id="autoRefreshToggle" checked style="width: 20px; height: 20px;">
+            <span>Auto-Refresh Timeline (Every 3 seconds)</span>
+        </label>
+    </div>
+
+    <!-- Timeline Container -->
+    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; margin-bottom: 1.5rem; border-bottom: 2px solid #3498db; padding-bottom: 1rem;">Event Timeline</h2>
+        
+        <!-- Timeline List -->
+        <div id="timelineContainer" style="position: relative;">
+            {% if recovery_events %}
+                {% for event in recovery_events %}
+                <div class="timeline-event" style="display: flex; margin-bottom: 2rem; opacity: 0; animation: fadeIn 0.5s ease-in forwards;">
+                    <!-- Timeline Marker -->
+                    <div style="flex-shrink: 0; width: 80px; text-align: center; position: relative;">
+                        <!-- Vertical Line (except last) -->
+                        {% if not forloop.last %}
+                        <div style="position: absolute; left: 50%; top: 60px; width: 2px; height: 80px; background: #e0e0e0;"></div>
+                        {% endif %}
+                        
+                        <!-- Icon Circle -->
+                        <div style="
+                            width: 60px;
+                            height: 60px;
+                            margin: 0 auto;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 24px;
+                            position: relative;
+                            z-index: 2;
+                            {% if event.color_class == 'danger' %}
+                            background: #ffe0e0;
+                            border: 2px solid #e74c3c;
+                            {% elif event.color_class == 'warning' %}
+                            background: #fff3cd;
+                            border: 2px solid #f39c12;
+                            {% elif event.color_class == 'info' %}
+                            background: #d1ecf1;
+                            border: 2px solid #17a2b8;
+                            {% elif event.color_class == 'success' %}
+                            background: #d4edda;
+                            border: 2px solid #28a745;
+                            {% else %}
+                            background: #f0f0f0;
+                            border: 2px solid #999;
+                            {% endif %}
+                        ">
+                            {{ event.icon }}
+                        </div>
+                        
+                        <!-- Time -->
+                        <div style="font-size: 12px; color: #7f8c8d; margin-top: 0.5rem; font-weight: bold;">
+                            {{ event.timestamp|date:"H:i:s" }}
+                        </div>
+                    </div>
+                    
+                    <!-- Event Content -->
+                    <div style="flex-grow: 1; margin-left: 2rem; padding: 1rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid
+                        {% if event.color_class == 'danger' %}#e74c3c{% elif event.color_class == 'warning' %}#f39c12{% elif event.color_class == 'info' %}#17a2b8{% elif event.color_class == 'success' %}#28a745{% else %}#999{% endif %};">
+                        
+                        <!-- Status Badge -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                            <span style="
+                                display: inline-block;
+                                padding: 0.5rem 1rem;
+                                border-radius: 4px;
+                                font-weight: bold;
+                                font-size: 12px;
+                                {% if event.color_class == 'danger' %}
+                                background: #e74c3c;
+                                color: white;
+                                {% elif event.color_class == 'warning' %}
+                                background: #f39c12;
+                                color: white;
+                                {% elif event.color_class == 'info' %}
+                                background: #17a2b8;
+                                color: white;
+                                {% elif event.color_class == 'success' %}
+                                background: #28a745;
+                                color: white;
+                                {% endif %}
+                            ">
+                                {{ event.status }}
+                            </span>
+                            <span style="
+                                padding: 0.5rem 1rem;
+                                border-radius: 4px;
+                                font-size: 11px;
+                                {% if event.severity == 'CRITICAL' %}
+                                background: #e74c3c;
+                                color: white;
+                                {% elif event.severity == 'HIGH' %}
+                                background: #f39c12;
+                                color: white;
+                                {% elif event.severity == 'MEDIUM' %}
+                                background: #3498db;
+                                color: white;
+                                {% elif event.severity == 'LOW' %}
+                                background: #95a5a6;
+                                color: white;
+                                {% endif %}
+                            ">
+                                {{ event.severity }}
+                            </span>
+                        </div>
+                        
+                        <!-- Event Details -->
+                        <div style="font-size: 14px; font-weight: bold; margin-bottom: 0.5rem; color: #2c3e50;">
+                            {{ event.description }}
+                        </div>
+                        
+                        <!-- Node Info -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 13px; color: #555;">
+                            <div>
+                                <strong>Client:</strong> {{ event.username }}
+                            </div>
+                            <div>
+                                <strong>IP Address:</strong> {{ event.ip_address }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 2rem; color: #7f8c8d; font-size: 16px;">
+                    <div style="font-size: 48px; margin-bottom: 1rem;">📊</div>
+                    <p>No recovery events detected yet.</p>
+                    <p style="font-size: 13px;">Events will appear here as nodes fail and recover.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 2rem;">
+        <h3 style="margin-top: 0; margin-bottom: 1rem;">Legend</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 40px; height: 40px; background: #ffe0e0; border: 2px solid #e74c3c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">🔴</div>
+                <div>
+                    <strong>Failure Detected</strong>
+                    <p style="margin: 0; font-size: 12px; color: #7f8c8d;">Node failure or disconnection</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 40px; height: 40px; background: #fff3cd; border: 2px solid #f39c12; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">⏱️</div>
+                <div>
+                    <strong>Recovery In Progress</strong>
+                    <p style="margin: 0; font-size: 12px; color: #7f8c8d;">Heartbeat timeout detected</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 40px; height: 40px; background: #d1ecf1; border: 2px solid #17a2b8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">💚</div>
+                <div>
+                    <strong>Heartbeat Restored</strong>
+                    <p style="margin: 0; font-size: 12px; color: #7f8c8d;">Connection re-established</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 40px; height: 40px; background: #d4edda; border: 2px solid #28a745; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">🟢</div>
+                <div>
+                    <strong>Recovered/Active</strong>
+                    <p style="margin: 0; font-size: 12px; color: #7f8c8d;">Node is operational</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 40px; height: 40px; background: #d4edda; border: 2px solid #28a745; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">✅</div>
+                <div>
+                    <strong>Recovery Completed</strong>
+                    <p style="margin: 0; font-size: 12px; color: #7f8c8d;">Successful recovery</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Information Box -->
+    <div style="background: #e3f2fd; border: 1px solid #64b5f6; border-radius: 8px; padding: 1.5rem; margin-top: 2rem; color: #0d47a1;">
+        <strong>ℹ️ About This Timeline:</strong>
+        <p style="margin: 0.5rem 0 0 0; font-size: 14px;">
+            This timeline displays <strong>REAL</strong> recovery events from your network monitoring system. Each event is tracked from:
+        </p>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem; font-size: 14px;">
+            <li><strong>ClientNodeStatus</strong> - Node failure and status changes</li>
+            <li><strong>NetworkEvent Records</strong> - Recovery and failure events</li>
+            <li><strong>Heartbeat Monitoring</strong> - Connection health and timeouts</li>
+            <li><strong>Activity Logs</strong> - Real-time node activity tracking</li>
+        </ul>
+        <p style="margin: 0.5rem 0 0 0; font-size: 14px;">
+            <strong>NO fake events.</strong> The timeline reflects actual backend monitoring behavior and self-healing actions.
+        </p>
+    </div>
+
+</div>
+
+<!-- Animations -->
+<style>
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.timeline-event:nth-child(1) { animation-delay: 0s; }
+.timeline-event:nth-child(2) { animation-delay: 0.1s; }
+.timeline-event:nth-child(3) { animation-delay: 0.2s; }
+.timeline-event:nth-child(4) { animation-delay: 0.3s; }
+.timeline-event:nth-child(5) { animation-delay: 0.4s; }
+.timeline-event:nth-child(n+6) { animation-delay: 0.5s; }
+</style>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Self-Healing Timeline Auto-Refresh
+(function() {
+    const TIMELINE_CONFIG = {
+        autoRefreshInterval: {{ refresh_interval_ms }},
+        apiUrl: '/admin-panel/api/self-healing-events/',
+    };
+
+    // Auto-refresh toggle
+    document.getElementById('autoRefreshToggle').addEventListener('change', function() {
+        if (this.checked) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    });
+
+    let autoRefreshIntervalId = null;
+
+    function startAutoRefresh() {
+        loadTimelineEvents();
+        autoRefreshIntervalId = setInterval(loadTimelineEvents, TIMELINE_CONFIG.autoRefreshInterval);
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshIntervalId) {
+            clearInterval(autoRefreshIntervalId);
+            autoRefreshIntervalId = null;
+        }
+    }
+
+    async function loadTimelineEvents() {
+        try {
+            const response = await fetch(TIMELINE_CONFIG.apiUrl);
+            if (!response.ok) {
+                console.warn('Failed to fetch timeline events');
+                return;
+            }
+
+            const data = await response.json();
+            if (!data.success) {
+                console.warn('API error:', data.message);
+                return;
+            }
+
+            // Update summary statistics
+            document.getElementById('totalEvents').textContent = data.summary.total_events;
+            document.getElementById('failureCount').textContent = data.summary.failure_events;
+            document.getElementById('recoveryCount').textContent = data.summary.recovery_events;
+            document.getElementById('activeNodes').textContent = data.summary.active_nodes;
+
+            // Update last update time
+            const lastUpdate = new Date(data.timestamp);
+            document.getElementById('lastUpdate').textContent = lastUpdate.toLocaleTimeString();
+
+            // Rebuild timeline
+            const container = document.getElementById('timelineContainer');
+            if (data.recovery_events.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #7f8c8d; font-size: 16px;">
+                        <div style="font-size: 48px; margin-bottom: 1rem;">📊</div>
+                        <p>No recovery events detected yet.</p>
+                        <p style="font-size: 13px;">Events will appear here as nodes fail and recover.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            data.recovery_events.forEach((event, index) => {
+                const timestamp = new Date(event.timestamp);
+                const timeStr = timestamp.toLocaleTimeString();
+                const colorBg = event.color_class === 'danger' ? '#ffe0e0' : 
+                                event.color_class === 'warning' ? '#fff3cd' :
+                                event.color_class === 'info' ? '#d1ecf1' :
+                                event.color_class === 'success' ? '#d4edda' : '#f0f0f0';
+                const colorBorder = event.color_class === 'danger' ? '#e74c3c' :
+                                    event.color_class === 'warning' ? '#f39c12' :
+                                    event.color_class === 'info' ? '#17a2b8' :
+                                    event.color_class === 'success' ? '#28a745' : '#999';
+                const lineColor = colorBorder;
+
+                html += `
+                    <div class="timeline-event" style="display: flex; margin-bottom: 2rem; opacity: 0; animation: fadeIn 0.5s ease-in forwards;">
+                        <div style="flex-shrink: 0; width: 80px; text-align: center; position: relative;">
+                            ${index < data.recovery_events.length - 1 ? `<div style="position: absolute; left: 50%; top: 60px; width: 2px; height: 80px; background: #e0e0e0;"></div>` : ''}
+                            <div style="width: 60px; height: 60px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; z-index: 2; background: ${colorBg}; border: 2px solid ${colorBorder};">
+                                ${event.icon}
+                            </div>
+                            <div style="font-size: 12px; color: #7f8c8d; margin-top: 0.5rem; font-weight: bold;">${timeStr}</div>
+                        </div>
+                        <div style="flex-grow: 1; margin-left: 2rem; padding: 1rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid ${lineColor};">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                <span style="display: inline-block; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; font-size: 12px; background: ${lineColor}; color: white;">${event.status}</span>
+                                <span style="padding: 0.5rem 1rem; border-radius: 4px; font-size: 11px; background: ${event.severity === 'CRITICAL' ? '#e74c3c' : event.severity === 'HIGH' ? '#f39c12' : event.severity === 'MEDIUM' ? '#3498db' : '#95a5a6'}; color: white;">${event.severity}</span>
+                            </div>
+                            <div style="font-size: 14px; font-weight: bold; margin-bottom: 0.5rem; color: #2c3e50;">${event.description}</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 13px; color: #555;">
+                                <div><strong>Client:</strong> ${event.username}</div>
+                                <div><strong>IP Address:</strong> ${event.ip_address}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+        } catch (error) {
+            console.error('Error loading timeline events:', error);
+        }
+    }
+
+    // Start auto-refresh on page load
+    startAutoRefresh();
+})();
+</script>
+{% endblock %}
